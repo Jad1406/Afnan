@@ -1,0 +1,464 @@
+/* Navbar.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #2e7d32;
+    --primary-light: #4caf50;
+    --primary-dark: #1b5e20;
+    --secondary-color: #f1f8e9;
+    --text-color-light: #333;
+    --text-color-dark: #f5f5f5;
+    --bg-light: #f9f9f4;
+    --bg-dark: #1e1e1e;
+    --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-dark: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --transition: all 0.3s ease;
+    --border-radius: 8px;
+    --navbar-height: 70px;
+}
+
+/* Base styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: var(--bg-light);
+    color: var(--text-color-light);
+}
+
+body.dark-mode {
+    background-color: var(--bg-dark);
+    color: var(--text-color-dark);
+}
+
+/* Navbar container */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--navbar-height);
+    z-index: 1000;
+    transition: var(--transition);
+    background-color: var(--bg-light);
+    box-shadow: var(--shadow-light);
+}
+
+.navbar.dark {
+    background-color: var(--bg-dark);
+    box-shadow: var(--shadow-dark);
+}
+
+.navbar.scrolled {
+    height: 60px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.navbar.light.scrolled {
+    background-color: rgba(249, 249, 244, 0.9);
+}
+
+.navbar.dark.scrolled {
+    background-color: rgba(30, 30, 30, 0.9);
+}
+
+.navbar-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Logo styling */
+.navbar-logo {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-logo a {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    font-size: 1.8rem;
+    transform: translateY(-2px);
+}
+
+.logo-text {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.5px;
+}
+
+.dark .logo-text {
+    color: var(--primary-light);
+}
+
+/* Navigation links */
+.navbar-menu {
+    margin: 0 auto;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li {
+    position: relative;
+}
+
+.nav-links li a {
+    display: flex;
+    align-items: center;
+    color: var(--text-color-light);
+    text-decoration: none;
+    padding: 10px 16px;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: var(--transition);
+    border-radius: var(--border-radius);
+}
+
+.dark .nav-links li a {
+    color: var(--text-color-dark);
+}
+
+.nav-links li:hover a {
+    background-color: rgba(46, 125, 50, 0.1);
+}
+
+.dark .nav-links li:hover a {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.nav-links li.active a {
+    color: var(--primary-color);
+    background-color: rgba(46, 125, 50, 0.15);
+    font-weight: 600;
+}
+
+.dark .nav-links li.active a {
+    color: var(--primary-light);
+    background-color: rgba(76, 175, 80, 0.15);
+}
+
+.nav-links li.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 25px;
+    height: 3px;
+    background-color: var(--primary-color);
+    border-radius: 10px;
+}
+
+.dark .nav-links li.active::after {
+    background-color: var(--primary-light);
+}
+
+.nav-icon {
+    margin-right: 6px;
+    font-size: 1.1rem;
+}
+
+/* Navbar actions */
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Improved search container with larger icon and adjusted green button */
+.search-container {
+    display: flex;
+    position: relative;
+    height: 42px;
+    max-width: 400px;
+    width: 100%;
+}
+
+.search-input {
+    width: 100%;
+    height: 100%;
+    padding: 0 15px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 1rem;
+    outline: none;
+    background-color: white;
+    color: #666;
+}
+
+.dark .search-input {
+    background-color: #333;
+    border-color: #444;
+    color: #eee;
+}
+
+.search-input:focus {
+    border-color: #2e7d32;
+}
+
+.dark .search-input:focus {
+    border-color: #4caf50;
+}
+
+.search-button {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 80px;
+    /* Increased width for the button */
+    background-color: #2e7d32;
+    border: none;
+    border-radius: 0 25px 25px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.dark .search-button {
+    background-color: #4caf50;
+}
+
+.search-button:hover {
+    background-color: #1b5e20;
+}
+
+.dark .search-button:hover {
+    background-color: #2e7d32;
+}
+
+.search-icon {
+    width: 26px;
+    /* Bigger icon */
+    height: 26px;
+    /* Bigger icon */
+    fill: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .search-container {
+        display: none;
+        /* Hide on mobile, show in mobile menu instead */
+    }
+}
+
+.theme-toggle,
+.cart-button,
+.profile-button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    background-color: transparent;
+    color: var(--text-color-light);
+}
+
+.dark .theme-toggle,
+.dark .cart-button,
+.dark .profile-button {
+    color: var(--text-color-dark);
+}
+
+.theme-toggle:hover,
+.cart-button:hover,
+.profile-button:hover {
+    background-color: rgba(46, 125, 50, 0.1);
+}
+
+.dark .theme-toggle:hover,
+.dark .cart-button:hover,
+.dark .profile-button:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.cart-button {
+    position: relative;
+}
+
+.cart-count {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 0.7rem;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark .cart-count {
+    background-color: var(--primary-light);
+}
+
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-color-light);
+}
+
+.dark .menu-toggle {
+    color: var(--text-color-dark);
+}
+
+/* Mobile menu */
+.mobile-menu {
+    display: none;
+    position: absolute;
+    top: var(--navbar-height);
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-light);
+    box-shadow: var(--shadow-light);
+    padding: 20px;
+    z-index: 999;
+}
+
+.dark .mobile-menu {
+    background-color: var(--bg-dark);
+    box-shadow: var(--shadow-dark);
+}
+
+.mobile-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mobile-menu li {
+    margin-bottom: 15px;
+}
+
+.mobile-menu a {
+    color: var(--text-color-light);
+    text-decoration: none;
+    font-size: 1.1rem;
+    display: block;
+    padding: 8px 0;
+}
+
+.dark .mobile-menu a {
+    color: var(--text-color-dark);
+}
+
+.mobile-search {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mobile-search input {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    background-color: var(--bg-light);
+    color: var(--text-color-light);
+}
+
+.dark .mobile-search input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #444;
+    color: var(--text-color-dark);
+}
+
+.mobile-search button {
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.dark .mobile-search button {
+    background-color: var(--primary-light);
+}
+
+/* Media queries */
+@media (max-width: 1024px) {
+    .search-input {
+        width: 150px;
+    }
+
+    .search-input:focus {
+        width: 200px;
+    }
+
+    .nav-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .navbar-menu {
+        display: none;
+    }
+
+    .search-container {
+        display: none;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .mobile-menu {
+        display: block;
+    }
+}
+
+@media (max-width: 600px) {
+    .navbar-container {
+        padding: 0 15px;
+    }
+
+    .logo-text {
+        font-size: 1.4rem;
+    }
+}

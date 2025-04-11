@@ -1,0 +1,376 @@
+/* FeaturedPlants.css */
+.featured-plants-section {
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 50px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.section-header.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Category tabs */
+.category-tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.category-tab {
+    padding: 8px 20px;
+    background-color: transparent;
+    border: 2px solid rgba(46, 125, 50, 0.2);
+    border-radius: 30px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-color-light);
+}
+
+.dark .category-tab {
+    border-color: rgba(76, 175, 80, 0.2);
+    color: var(--text-color-dark);
+}
+
+.category-tab:hover {
+    background-color: rgba(46, 125, 50, 0.08);
+}
+
+.dark .category-tab:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.category-tab.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.dark .category-tab.active {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+/* Plants grid */
+.plants-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+    opacity: 0;
+    transition: opacity 0.8s ease-out;
+}
+
+.plants-grid.visible {
+    opacity: 1;
+}
+
+/* Plant card */
+.plant-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: cardAppear 0.5s ease-out forwards;
+    animation-play-state: paused;
+}
+
+.plants-grid.visible .plant-card {
+    animation-play-state: running;
+}
+
+.dark .plant-card {
+    background-color: #2a2a2a;
+    box-shadow: var(--shadow-dark);
+}
+
+.plant-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.dark .plant-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+
+/* Plant image */
+.plant-image-container {
+    position: relative;
+    overflow: hidden;
+    height: 220px;
+}
+
+.plant-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(241, 248, 233, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.dark .plant-image-placeholder {
+    background-color: rgba(27, 94, 32, 0.2);
+}
+
+.plant-icon {
+    font-size: 4rem;
+    opacity: 0.7;
+}
+
+.plant-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    z-index: 2;
+}
+
+.dark .plant-badge {
+    background-color: var(--primary-light);
+}
+
+.quick-view-btn,
+.add-to-cart-btn {
+    position: absolute;
+    background-color: white;
+    border: none;
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 20px;
+    cursor: pointer;
+    opacity: 0;
+    transition: var(--transition);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dark .quick-view-btn,
+.dark .add-to-cart-btn {
+    background-color: #2a2a2a;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.quick-view-btn {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, calc(-50% - 20px));
+}
+
+.add-to-cart-btn {
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.dark .add-to-cart-btn {
+    background-color: var(--primary-light);
+}
+
+.plant-card:hover .quick-view-btn {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+}
+
+.plant-card:hover .add-to-cart-btn {
+    opacity: 1;
+    bottom: 15px;
+}
+
+.plant-card:hover .plant-image-placeholder {
+    opacity: 0.8;
+}
+
+/* Plant info */
+.plant-info {
+    padding: 20px;
+}
+
+.plant-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    transition: var(--transition);
+}
+
+.plant-card:hover .plant-name {
+    color: var(--primary-color);
+}
+
+.dark .plant-card:hover .plant-name {
+    color: var(--primary-light);
+}
+
+.plant-category {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 12px;
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+.plant-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.stars {
+    color: #ffc107;
+    letter-spacing: -1px;
+}
+
+.rating-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.plant-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.plant-tag {
+    font-size: 0.75rem;
+    background-color: rgba(241, 248, 233, 0.8);
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+.dark .plant-tag {
+    background-color: rgba(27, 94, 32, 0.2);
+}
+
+.plant-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.plant-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.dark .plant-price {
+    color: var(--primary-light);
+}
+
+.wishlist-btn {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: var(--transition);
+    color: #777;
+}
+
+.dark .wishlist-btn {
+    color: #aaa;
+}
+
+.wishlist-btn:hover {
+    color: #e91e63;
+    transform: scale(1.1);
+}
+
+/* CTA section */
+.featured-cta {
+    text-align: center;
+    margin-top: 60px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.featured-cta.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.featured-cta .btn {
+    padding: 12px 30px;
+    font-size: 1.05rem;
+}
+
+/* Add these styles to FeaturedPlants.css */
+.plant-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.plant-card:hover .plant-image {
+    transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Media queries */
+@media (max-width: 1200px) {
+    .plants-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .plants-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .plants-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .category-tabs {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .category-tab {
+        width: 80%;
+    }
+}

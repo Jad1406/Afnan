@@ -1,0 +1,811 @@
+/* Education.css */
+.education-page {
+    padding-top: var(--navbar-height);
+}
+
+.education-header {
+    background-color: #f1f8e9;
+    padding: 60px 0 40px;
+    margin-bottom: 50px;
+}
+
+.dark .education-header {
+    background-color: #1e3320;
+}
+
+.education-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.dark .education-header h1 {
+    color: var(--primary-light);
+}
+
+.education-header p {
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+    max-width: 700px;
+    opacity: 0.8;
+}
+
+/* Search bar */
+.search-bar {
+    display: flex;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 14px 20px;
+    border: 1px solid #ddd;
+    border-radius: 30px 0 0 30px;
+    font-size: 1rem;
+    outline: none;
+    background-color: white;
+}
+
+.dark .search-bar input {
+    background-color: #333;
+    border-color: #444;
+    color: white;
+}
+
+.search-bar input:focus {
+    border-color: var(--primary-color);
+}
+
+.dark .search-bar input:focus {
+    border-color: var(--primary-light);
+}
+
+.search-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 14px 25px;
+    border-radius: 0 30px 30px 0;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dark .search-button {
+    background-color: var(--primary-light);
+}
+
+.search-button:hover {
+    background-color: var(--primary-dark);
+}
+
+.dark .search-button:hover {
+    background-color: var(--primary-color);
+}
+
+/* Section Styles */
+.encyclopedia-section,
+.guides-section,
+.qa-section {
+    margin-bottom: 80px;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.dark .section-header h2 {
+    color: var(--primary-light);
+}
+
+.section-header p {
+    font-size: 1.1rem;
+    max-width: 700px;
+    margin: 0 auto 20px;
+    opacity: 0.8;
+}
+
+/* Category Filters */
+.category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.category-button {
+    background-color: transparent;
+    border: 2px solid rgba(46, 125, 50, 0.2);
+    color: var(--text-color-light);
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dark .category-button {
+    border-color: rgba(76, 175, 80, 0.2);
+    color: var(--text-color-dark);
+}
+
+.category-button:hover {
+    background-color: rgba(46, 125, 50, 0.08);
+    border-color: rgba(46, 125, 50, 0.4);
+}
+
+.dark .category-button:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-color: rgba(76, 175, 80, 0.4);
+}
+
+.category-button.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.dark .category-button.active {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+/* Plant Encyclopedia Grid */
+.plants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.plant-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.dark .plant-card {
+    background-color: #2a2a2a;
+    box-shadow: var(--shadow-dark);
+}
+
+.plant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.dark .plant-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.plant-image-placeholder {
+    height: 180px;
+    background-color: #f1f8e9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark .plant-image-placeholder {
+    background-color: #1e3320;
+}
+
+.plant-icon {
+    font-size: 3.5rem;
+    opacity: 0.7;
+}
+
+.plant-info {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.plant-name {
+    font-size: 1.3rem;
+    margin-bottom: 5px;
+}
+
+.plant-common-name {
+    font-size: 0.95rem;
+    color: #777;
+    margin-bottom: 15px;
+}
+
+.dark .plant-common-name {
+    color: #aaa;
+}
+
+.plant-care-icons {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.dark .plant-care-icons {
+    border-color: #444;
+}
+
+.care-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.care-icon {
+    font-size: 1.3rem;
+    margin-bottom: 5px;
+}
+
+.care-label {
+    font-size: 0.75rem;
+    color: #777;
+    margin-bottom: 2px;
+}
+
+.dark .care-label {
+    color: #aaa;
+}
+
+.care-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.plant-description {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.view-details-btn {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    padding: 8px 0;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    margin-top: auto;
+}
+
+.dark .view-details-btn {
+    color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.view-details-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.dark .view-details-btn:hover {
+    background-color: var(--primary-light);
+}
+
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    background-color: #f9f9f4;
+    border-radius: var(--border-radius);
+}
+
+.dark .no-results {
+    background-color: #2a2a2a;
+}
+
+/* How-To Guides */
+.guides-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 30px;
+}
+
+.guide-card {
+    display: flex;
+    background-color: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+}
+
+.dark .guide-card {
+    background-color: #2a2a2a;
+    box-shadow: var(--shadow-dark);
+}
+
+.guide-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.dark .guide-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.guide-image-placeholder {
+    width: 120px;
+    background-color: #f1f8e9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark .guide-image-placeholder {
+    background-color: #1e3320;
+}
+
+.guide-icon {
+    font-size: 2.5rem;
+    opacity: 0.7;
+}
+
+.guide-content {
+    flex: 1;
+    padding: 20px;
+}
+
+.guide-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.guide-category {
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    background-color: #f1f8e9;
+    color: var(--primary-color);
+    padding: 3px 10px;
+    border-radius: 15px;
+}
+
+.dark .guide-category {
+    background-color: #1e3320;
+    color: var(--primary-light);
+}
+
+.guide-difficulty {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.dark .guide-difficulty {
+    color: #aaa;
+}
+
+.guide-title {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.guide-excerpt {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    opacity: 0.9;
+}
+
+.guide-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.guide-time {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.dark .guide-time {
+    color: #aaa;
+}
+
+.time-icon {
+    font-size: 1.1rem;
+}
+
+.read-guide-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dark .read-guide-btn {
+    background-color: var(--primary-light);
+}
+
+.read-guide-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.dark .read-guide-btn:hover {
+    background-color: var(--primary-color);
+}
+
+/* Q&A Section */
+.ask-question-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 10px;
+}
+
+.dark .ask-question-btn {
+    background-color: var(--primary-light);
+}
+
+.ask-question-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.dark .ask-question-btn:hover {
+    background-color: var(--primary-color);
+}
+
+.questions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.question-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 25px;
+    box-shadow: var(--shadow-light);
+}
+
+.dark .question-card {
+    background-color: #2a2a2a;
+    box-shadow: var(--shadow-dark);
+}
+
+.question-header {
+    margin-bottom: 20px;
+}
+
+.question-title {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+}
+
+.question-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.dark .question-meta {
+    color: #aaa;
+}
+
+.question-category {
+    text-transform: capitalize;
+    background-color: #f1f8e9;
+    color: var(--primary-color);
+    padding: 2px 10px;
+    border-radius: 15px;
+}
+
+.dark .question-category {
+    background-color: #1e3320;
+    color: var(--primary-light);
+}
+
+.answers-container h4 {
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+.dark .answers-container h4 {
+    color: #ccc;
+}
+
+.answer {
+    background-color: #f9f9f4;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+}
+
+.dark .answer {
+    background-color: #333;
+}
+
+.answer-content {
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.answer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.answer-meta {
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.dark .answer-meta {
+    color: #aaa;
+}
+
+.answer-votes {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.vote-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.vote-btn:hover {
+    background-color: #eee;
+}
+
+.dark .vote-btn:hover {
+    background-color: #444;
+}
+
+.upvote {
+    color: var(--primary-color);
+}
+
+.dark .upvote {
+    color: var(--primary-light);
+}
+
+.downvote {
+    color: #777;
+}
+
+.vote-count {
+    font-weight: 600;
+}
+
+.add-answer {
+    margin-top: 30px;
+}
+
+.add-answer textarea {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    resize: vertical;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    margin-bottom: 15px;
+}
+
+.dark .add-answer textarea {
+    background-color: #333;
+    border-color: #444;
+    color: white;
+}
+
+.add-answer textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.dark .add-answer textarea:focus {
+    border-color: var(--primary-light);
+}
+
+.submit-answer-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dark .submit-answer-btn {
+    background-color: var(--primary-light);
+}
+
+.submit-answer-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.dark .submit-answer-btn:hover {
+    background-color: var(--primary-color);
+}
+
+/* Add or update these styles in your Education.css file */
+
+/* Plant image styles */
+.plant-image-container {
+    height: 180px;
+    overflow: hidden;
+    position: relative;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+.plant-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.plant-card:hover .plant-image {
+    transform: scale(1.05);
+}
+
+/* Guide image styles */
+.guide-image-container {
+    width: 120px;
+    height: 100%;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    background-color: #f1f8e9;
+}
+
+.dark .guide-image-container {
+    background-color: #1e3320;
+}
+
+.guide-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.guide-card:hover .guide-image {
+    transform: scale(1.05);
+}
+
+/* Update guides-grid & guide card for image integration */
+.guide-card {
+    display: flex;
+    height: 180px;
+}
+
+/* Guide icon (still using this in the new design) */
+.guide-icon {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.dark .guide-icon {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* Media Queries */
+@media (max-width: 992px) {
+
+    .plants-grid,
+    .guides-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .guide-card {
+        flex-direction: column;
+    }
+
+    .guide-image-placeholder {
+        width: 100%;
+        height: 120px;
+    }
+}
+
+@media (max-width: 768px) {
+    .education-header {
+        padding: 40px 0 30px;
+    }
+
+    .education-header h1 {
+        font-size: 2rem;
+    }
+
+    .category-filters {
+        flex-wrap: wrap;
+    }
+
+    .category-button {
+        flex: 1 1 calc(50% - 10px);
+        text-align: center;
+    }
+
+    .plants-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .plant-care-icons {
+        gap: 15px;
+    }
+
+    .question-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .answer-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .guides-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-header h2 {
+        font-size: 1.8rem;
+    }
+}
