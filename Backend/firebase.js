@@ -4,7 +4,7 @@ const serviceAccount = require(process.env.SERVICE_ACCOUNT_KEY_PATH);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'gs://afnan-30b04.firebasestorage.app'
+  storageBucket: process.env.STORAGE_BUCKET,
 });
 
 const bucket = admin.storage().bucket();
