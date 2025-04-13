@@ -27,8 +27,9 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
-  }
-})
+  }}
+ , { timestamps: true } // Adds createdAt and updatedAt automatically 
+)
 
 UserSchema.pre('save', async function () {
   const salt = await bcrypt.genSalt(10)

@@ -16,10 +16,15 @@ const getPublicProducts = async (req, res) => {
 
 // 🔒 Seller: create product
 const createProduct = async (req, res) => {
-  req.body.seller = req.user.userId
-  const product = await Product.create(req.body)
-  res.status(StatusCodes.CREATED).json({ product })
-}
+    // Add the current user as the seller
+    req.body.seller = req.user.userId;
+    
+    // Create the product with data from req.body (including image URL)
+    const product = await Product.create(req.body);
+    
+    res.status(StatusCodes.CREATED).json({ product });
+
+};
 
 // 🔒 Seller: get their products
 const getSellerProducts = async (req, res) => {
@@ -58,6 +63,21 @@ const deleteAnyProduct = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Product deleted by admin' })
 }
 
+
+
+const getProductCategories = async (req, res) => {
+  try {
+    // Get all possible categories from the schema enum
+    const categories = Product.schema.path('category').enumValues;
+    
+    // Return the categories array
+    res.status(200).json({ categories });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ msg: 'Server error fetching categories' });
+  }
+};
+
 module.exports = {
   getPublicProducts,
   getSellerProducts,
@@ -65,4 +85,5 @@ module.exports = {
   updateProduct,
   deleteProduct,
   deleteAnyProduct,
+  getProductCategories
 }
