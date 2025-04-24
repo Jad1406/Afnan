@@ -577,7 +577,11 @@ axios
     setFilteredProducts(productsData);
     
     // Don't set categories here anymore, we'll get them from the dedicated endpoint
+          // Extract unique categories
+      // const uniqueCategories = [...new Set(productsData.map(product => product.category))];
+      // setCategories(uniqueCategories);
     
+
     setLoading(false); // Set loading to false after fetching
   })
   .catch(error => {
@@ -692,13 +696,13 @@ useEffect(() => {
   // Get predefined categories from backend
   const fetchCategories = async () => {
     try {
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      // const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       const categoriesResponse = await axios.get(
         'http://localhost:3000/api/v1/market/categories',
         {
-          withCredentials: true,
-          headers
+          // withCredentials: true,
+          // headers
         }
       );
       
@@ -778,7 +782,7 @@ const handleSubmitProduct = async (e) => {
     if (newProduct.imageFile) {
       // Create form data for the image upload
       const formData = new FormData();
-      formData.append('image', newProduct.imageFile);
+      formData.append('media', newProduct.imageFile);
       
       // Upload image to your Firebase endpoint with folder parameter
       const imageResponse = await axios.post(
@@ -792,6 +796,7 @@ const handleSubmitProduct = async (e) => {
       
       // Get the image URL from the response
       imageUrl = imageResponse.data.imageUrl;
+      console.log(imageUrl)
     }
     
     // Step 2: Create the product object with the image URL
@@ -804,7 +809,7 @@ const handleSubmitProduct = async (e) => {
       rating: parseFloat(newProduct.rating),
       image: imageUrl // Use the URL from Firebase
     };
-    
+    console.log(productToAdd)
     // Step 3: Send the product data to your MongoDB API
     const productResponse = await axios.post(
       'http://localhost:3000/api/v1/market', 
@@ -815,6 +820,7 @@ const handleSubmitProduct = async (e) => {
       }
     );
     
+    console.log(productResponse)
     // Step 4: Add the new product to the local state
     const addedProduct = productResponse.data.product; // Assuming your API returns the created product
     
