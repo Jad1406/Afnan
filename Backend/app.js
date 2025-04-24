@@ -15,6 +15,7 @@ const authRouter = require('./routes/auth');
 const marketRouter = require('./routes/Product');
 const utilRouter = require('./routes/utils');
 const communityRouter = require('./routes/communityRoutes');
+const educationRouter = require('./routes/Education');
 
 
 // error handler
@@ -52,7 +53,7 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/market', marketRouter);
 app.use('/api/v1/community', communityRouter);
 app.use("/api/v1/utils",utilRouter);
-
+app.use('/api/v1/education', educationRouter);
 
 //error handling
 app.use(notFoundMiddleware);
