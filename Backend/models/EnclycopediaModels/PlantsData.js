@@ -7,10 +7,10 @@ const plantsDataSchema = new mongoose.Schema(
         required: true, // Name of the plant
         unique: true, // Ensure each plant has a unique name
     },
-    commertialName: { 
+    commercialName: { 
         type: String, 
         required: false 
-    },
+    }, //FIxed typo
     category: { 
         type: String, 
         required: true,
@@ -65,6 +65,6 @@ const plantsDataSchema = new mongoose.Schema(
   },
   { timestamps: true } // Adds createdAt and updatedAt automatically -- Kept it in this schema to track dates.
 )
-const PlantsData = mongoose.model('PlantsData', plantsDataSchema)
+const PlantsData = mongoose.model('plants', plantsDataSchema)
 
 module.exports = PlantsData
