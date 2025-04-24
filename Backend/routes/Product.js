@@ -33,6 +33,6 @@ router.delete('/:id', auth, asyncWrapper(deleteProduct))
 router.delete('/admin/:id', auth, isAdmin, asyncWrapper(deleteAnyProduct))
 
 // getting product categories to use in the frontend
-router.get('/categories', auth, asyncWrapper(getProductCategories));
+router.get('/categories', asyncWrapper(getProductCategories));
 
 module.exports = router
