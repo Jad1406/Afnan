@@ -87,7 +87,7 @@ function AppContent() {
                 darkMode={darkMode} 
                 toggleDarkMode={toggleDarkMode} 
                 isAuthenticated={isAuthenticated}
-                onLogout={handleLogout}
+                // onLogout={handleLogout}
               />
             } />
           </Routes>
