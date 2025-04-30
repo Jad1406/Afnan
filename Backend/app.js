@@ -13,6 +13,7 @@ const connectDB = require('./db/connect');
 // routers
 const authRouter = require('./routes/auth');
 const marketRouter = require('./routes/Product');
+const reviewRouter = require('./routes/ReviewRoutes');
 const utilRouter = require('./routes/utils');
 const communityRouter = require('./routes/communityRoutes');
 const educationRouter = require('./routes/Education');
@@ -42,15 +43,13 @@ app.use(cors({
 }));
 
 
+//////////
 // routes
-// app.get('/', (req, res) => {
-//   console.log('Root route hit');
 
-//   res.status(200).send('<h1>Marketplace API</h1>');
-// });
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/market', marketRouter);
+app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/community', communityRouter);
 app.use("/api/v1/utils",utilRouter);
 app.use('/api/v1/education', educationRouter);

@@ -1,9 +1,12 @@
-// Signup.jsx with proper image imports
-import React, { useState } from 'react';
+// Signup.jsx with AuthContext Integration
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios'; // Import axios
 import './Auth.css';
 // Import the background image
 import authBg2Image from '../../assets/images/auth-bg-2.jpg';
+// Import the auth context hook
+import { useAuth } from './AuthContext';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +19,16 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  
+  // Get auth context
+  const { isAuthenticated, login } = useAuth();
+  
+  // If already authenticated, redirect to home
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   // Create a style object for the background image
   const authImageStyle = {
@@ -55,44 +68,44 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      // Here you would normally make an API call to your backend
-      // For demo purposes, we'll simulate a successful signup
-      const response = await fakeSignupRequest(formData);
+      // Create the payload for the API request
+      const signupData = {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        password: formData.password
+      };
       
-      if (response.success) {
-        // Save auth token to localStorage
-        localStorage.setItem('token', response.token);
-        // Redirect to home page
+      // Using axios instead of fetch
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api/v1/auth/signup`,
+        signupData,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // With axios, the response data is already parsed as JSON in response.data
+      const data = response.data;
+      
+      // Auto-login after successful signup
+      const loginResult = await login(formData.email, formData.password);
+      
+      if (loginResult.success) {
+        // Redirect to home page or dashboard
         navigate('/');
       } else {
-        setError(response.message);
+        setError(loginResult.message || 'Auto-login failed. Please try logging in manually.');
       }
     } catch (err) {
-      setError('Signup failed. Please try again.');
+      // Axios stores the error response data in err.response.data
+      const errorMessage = err.response?.data?.message || 'An error occurred. Please try again.';
+      setError(errorMessage);
       console.error('Signup error:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Simulate API request
-  const fakeSignupRequest = (data) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (data.email && data.password && data.firstName && data.lastName) {
-          resolve({
-            success: true,
-            token: 'fake-jwt-token-' + Math.random(),
-            message: 'Signup successful'
-          });
-        } else {
-          resolve({
-            success: false,
-            message: 'Please fill all required fields'
-          });
-        }
-      }, 1000);
-    });
   };
 
   return (

@@ -1,11 +1,9 @@
 
-
-
-
-  import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './Community.css';
+import { useAuth } from '../components/Auth/AuthContext'; // Import the auth context hook
 
 // Import Components
 import ForumList from '../components/ListofPosts/ForumList';
@@ -18,8 +16,11 @@ const API_BASE_URL = 'http://localhost:3000'; // Replace with your actual base U
 
 const Community = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('forum');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Use the AuthContext instead of local auth state
+  const { isAuthenticated, requireAuth } = useAuth();
   
   // Loading and error states
   const [isLoading, setIsLoading] = useState({
@@ -53,7 +54,13 @@ const Community = () => {
       return;
     }
     
-    checkAuthAndProceed(async () => {
+    // Use the requireAuth function from AuthContext
+    requireAuth({
+      type: 'REDIRECT',
+      payload: { path: location.pathname }
+    });
+    
+    if (isAuthenticated) {
       try {
         // Create post through API
         await axios.post(
@@ -82,40 +89,8 @@ const Community = () => {
       } catch (error) {
         console.error('Error creating forum post:', error);
       }
-    });
+    }
   };
-
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Example: Check if auth token exists in local storage
-        const token = localStorage.getItem('token');
-        
-        if (token) {
-          // Verify token with backend
-          const response = await axios.get(`${API_BASE_URL}/api/v1/auth/verify`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          console.log('Auth response:', response);
-          if (response.status === 200) {
-            setIsAuthenticated(true);
-          } else {
-            setIsAuthenticated(false);
-          }
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error('Error checking authentication status:', error);
-        setIsAuthenticated(false);
-      }
-    };
-    
-    checkAuth();
-  }, []);
 
   ////////////////////
   //// API Transformation Functions:
@@ -223,14 +198,19 @@ const Community = () => {
 
   ///////////////
   ///// API Fetching Functions:
+  
   // Check if user is authenticated before performing interactions
+  // UPDATED: Now uses the AuthContext requireAuth function
   const checkAuthAndProceed = (action) => {
-    if (isAuthenticated) {
+    // Use the requireAuth function from AuthContext
+    const isAuthorized = requireAuth({
+      type: 'REDIRECT',
+      payload: { path: location.pathname }
+    });
+    
+    if (isAuthenticated && isAuthorized) {
       // User is logged in, proceed with the action
       action();
-    } else {
-      // User is not logged in, redirect to login page
-      navigate('/login');
     }
   };
 
@@ -403,7 +383,7 @@ const Community = () => {
 
   // Add a comment to a post with auth check
   const addCommentToPost = async (postId, commentContent, parentCommentId = null) => {
-    checkAuthAndProceed(async () => {
+    const result = checkAuthAndProceed(async () => {
       try {
         const token = localStorage.getItem('token');
         const response = await axios.post(
@@ -437,11 +417,13 @@ const Community = () => {
         throw error;
       }
     });
+    
+    return result;
   };
 
   // Reply to a comment with auth check
   const replyToComment = async (postId, commentId, replyContent) => {
-    checkAuthAndProceed(async () => {
+    const result = checkAuthAndProceed(async () => {
       try {
         return await addCommentToPost(postId, replyContent, commentId);
       } catch (error) {
@@ -449,6 +431,8 @@ const Community = () => {
         throw error;
       }
     });
+    
+    return result;
   };
     
   // Fetch all data on component mount

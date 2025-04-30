@@ -1,16 +1,20 @@
-// Market.jsx 
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 import './Market.css';
 import { useCart } from '../CartContext';
-import { useWishlist } from '../WishlistContext'; // Import useWishlist
+import { useWishlist } from '../WishlistContext';
+import { useAuth } from '../components/Auth/AuthContext';
 import ProductQuickView from '../components/ProductQuickView/ProductQuickView';
+import ProductRating from '../components/ProductRating/ProductRating';
 import ClipLoader from 'react-spinners/ClipLoader';
+
+// Consistent API base URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 const Market = () => {
   // State for products and filters
-  //We need models for the products and wishlist(Link the wishlist to the user)
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -19,20 +23,16 @@ const Market = () => {
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('featured');
-  const [wishlist, setWishlist] = useState([]);
-  const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [loading, setLoading] = useState(true);  // New state for loading
+  const [loading, setLoading] = useState(true);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: '',
     price: '',
     description: '',
     stock: '',
-    // rating: 5,
     image: null,
     imageFile: null
   });
@@ -47,45 +47,61 @@ const Market = () => {
   // Get wishlist context
   const { toggleWishlistItem, isInWishlist } = useWishlist();
   
+  // Get auth context
+  const { isAuthenticated, requireAuth, registerCallback } = useAuth();
   
   // Initialize products and categories on component mount
-  // Update the useEffect that fetches products
   useEffect(() => {
-  setLoading(true); // Set loading to true before fetching
-  
-  // Get authentication token if available
-  const token = localStorage.getItem('token');
-  const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-  
-  axios
-    .get('http://localhost:3000/api/v1/market/public', { 
-      withCredentials: true,
-      headers
-    })
-    .then(response => {
-      let productsData = response.data.products;
-      if(!productsData || productsData.length === 0) {
-        console.error('No products found in the response');
-      } else {
-        console.log('Fetched products:', productsData);
-      }
-      setProducts(productsData);
-      setFilteredProducts(productsData);
-      
-      // Don't set categories here anymore, we'll get them from the dedicated endpoint
-            // Extract unique categories
-        // const uniqueCategories = [...new Set(productsData.map(product => product.category))];
-        // setCategories(uniqueCategories);
-      
-  
-      setLoading(false); // Set loading to false after fetching
-    })
-    .catch(error => {
-      console.error('Error fetching products:', error.message, error.response);
-      setLoading(false); // Also set loading to false if there's an error
-    });
+    setLoading(true);
+    
+    // Get authentication token if available
+    const token = localStorage.getItem('token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    axios
+      .get(`${API_BASE_URL}/api/v1/market/public`, { 
+        withCredentials: true,
+        headers
+      })
+      .then(response => {
+        let productsData = response.data.products;
+        if(!productsData || productsData.length === 0) {
+          console.error('No products found in the response');
+        } else {
+          console.log('Fetched products:', productsData);
+        }
+        setProducts(productsData);
+        setFilteredProducts(productsData);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching products:', error.message, error.response);
+        setLoading(false);
+      });
   }, []);
   
+  // Register callbacks for actions that require authentication
+  useEffect(() => {
+    registerCallback('addProductToWishlist', (productId) => {
+      const product = products.find(p => p.id === productId || p._id === productId);
+      if (product) {
+        toggleWishlistItem(product);
+      }
+    });
+    
+    registerCallback('openAddProductModal', () => {
+      setIsAddProductOpen(true);
+    });
+    
+    registerCallback('addProductToCart', (product) => {
+      addToCart(product);
+    });
+    
+    registerCallback('openProductQuickView', (product) => {
+      setQuickViewProduct(product);
+      setIsQuickViewOpen(true);
+    });
+  }, [products]);
   
   // Filter products when filters change
   useEffect(() => {
@@ -119,7 +135,8 @@ const Market = () => {
         result.sort((a, b) => b.price - a.price);
         break;
       case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
+        // Use averageRating instead of rating
+        result.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
         break;
       default:
         // 'featured' - no specific sorting
@@ -129,11 +146,19 @@ const Market = () => {
     setFilteredProducts(result);
   }, [activeCategory, priceRange, searchQuery, sortBy, products]);
   
-  // Handle wishlist toggle
+  // Handle wishlist toggle with authentication
   const handleWishlistToggle = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      toggleWishlistItem(product);
+    if (requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'addProductToWishlist',
+        args: [productId]
+      }
+    })) {
+      const product = products.find(p => p.id === productId || p._id === productId);
+      if (product) {
+        toggleWishlistItem(product);
+      }
     }
   };
   
@@ -142,6 +167,7 @@ const Market = () => {
     if (event) {
       event.stopPropagation();
     }
+    
     addToCart(product);
     
     // Optional: Give user feedback that item was added
@@ -156,19 +182,51 @@ const Market = () => {
     }
   };
 
-    // Handle quick view
-    const handleQuickView = (product, event) => {
-      if (event) {
-        event.stopPropagation();
-      }
+  // Handle quick view with authentication check if needed
+  const handleQuickView = (product, event) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    // Make sure we have a valid product before opening
+    if (product && (product.id || product._id)) {
       setQuickViewProduct(product);
       setIsQuickViewOpen(true);
-    };
+    } else {
+      console.error("Attempted to open quick view with invalid product:", product);
+    }
+  };
   
-  // Close quick view
+  // closeQuickView function
   const closeQuickView = () => {
     setIsQuickViewOpen(false);
-    setQuickViewProduct(null);
+    
+    // Delay clearing the product to prevent rendering issues
+    setTimeout(() => {
+      setQuickViewProduct(null);
+    }, 300);
+  };
+  
+  // Handle product updates (after rating changes)
+  const handleProductUpdate = (updatedProduct) => {
+    // First, update the product in the products array
+    const updatedProducts = products.map(product => 
+      (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
+    );
+    
+    setProducts(updatedProducts);
+
+    // Also update the filtered products to ensure the UI reflects the change
+    setFilteredProducts(prevFiltered => {
+      return prevFiltered.map(product => 
+        (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
+      );
+    });
+    
+    // Update quickViewProduct if it's the one being rated
+    if (quickViewProduct && (quickViewProduct.id === updatedProduct.id || quickViewProduct._id === updatedProduct._id)) {
+      setQuickViewProduct(updatedProduct);
+    }
   };
   
   // Handle image error
@@ -176,56 +234,27 @@ const Market = () => {
     e.target.onerror = null; // Prevent infinite error loop
     e.target.src = "https://via.placeholder.com/300x300?text=Product+Image"; 
   };
-
-
   
-  // Remove from cart
-  const removeFromCart = (productId) => {
-    setCart(cart.filter(item => item.id !== productId));
+  // Handle opening add product modal with authentication check
+  const handleOpenAddProduct = () => {
+    if (requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'openAddProductModal',
+        args: []
+      }
+    })) {
+      setIsAddProductOpen(true);
+    }
   };
-  
-  // Update cart item quantity
-  const updateCartQuantity = (productId, newQuantity) => {
-    if (newQuantity < 1) return;
-    
-    setCart(cart.map(item => 
-      item.id === productId 
-        ? { ...item, quantity: newQuantity } 
-        : item
-    ));
-  };
-  
-  // Calculate cart total
-  const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-  
-  // Handle new product form changes
-  const handleProductChange = (e) => {
-    const { name, value } = e.target;
-    setNewProduct({
-      ...newProduct,
-      [name]: value
-    });
-  };
-  
-  //////////////////////////
   
   // Check if user is authenticated and fetch categories on mount
   useEffect(() => {
-    // Check authentication
-    const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
-    
     // Get predefined categories from backend
     const fetchCategories = async () => {
       try {
-        // const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        
         const categoriesResponse = await axios.get(
-          'http://localhost:3000/api/v1/market/categories',
-          {
-            // withCredentials: true,
-            // headers
-          }
+          `${API_BASE_URL}/api/v1/market/categories`
         );
         
         if (categoriesResponse.data && categoriesResponse.data.categories) {
@@ -238,8 +267,6 @@ const Market = () => {
     
     fetchCategories();
   }, []);
-  
-  
   
   // Handle image upload
   const handleImageUpload = (e) => {
@@ -264,29 +291,33 @@ const Market = () => {
         setNewProduct({
           ...newProduct,
           image: reader.result,
-          imageFile: file  // Store the original file for later upload
+          imageFile: file
         });
       };
       reader.readAsDataURL(file);
     }
   };
-  
-  // Handle form submission
+  // Handle form submission for new product with authentication check
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
+    
+    // Check authentication before proceeding
+    if (!requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'submitProductForm',
+        args: []
+      }
+    })) {
+      return;
+    }
     
     try {
       // Set submitting state to true
       setIsSubmitting(true);
       
-      // Get authentication token from localStorage (or wherever you store it)
+      // Get authentication token from localStorage
       const token = localStorage.getItem('token');
-      
-      if (!token) {
-        alert("You must be logged in to list a product. Please log in and try again.");
-        setIsSubmitting(false);
-        return;
-      }
       
       // Create headers with authentication
       const authHeaders = {
@@ -308,7 +339,7 @@ const Market = () => {
         
         // Upload image to your Firebase endpoint with folder parameter
         const imageResponse = await axios.post(
-          'http://localhost:3000/api/v1/utils/upload-image?folder=products', 
+          `${API_BASE_URL}/api/v1/utils/upload-image?folder=products`, 
           formData, 
           {
             headers: formDataHeaders,
@@ -318,7 +349,6 @@ const Market = () => {
         
         // Get the image URL from the response
         imageUrl = imageResponse.data.imageUrl;
-        console.log(imageUrl)
       }
       
       // Step 2: Create the product object with the image URL
@@ -328,13 +358,12 @@ const Market = () => {
         price: parseFloat(newProduct.price),
         description: newProduct.description,
         stock: parseInt(newProduct.stock),
-        rating: parseFloat(newProduct.rating),
-        image: imageUrl // Use the URL from Firebase
+        image: imageUrl
       };
-      console.log(productToAdd)
-      // Step 3: Send the product data to your MongoDB API
+      
+      // Step 3: Send the product data to MongoDB API
       const productResponse = await axios.post(
-        'http://localhost:3000/api/v1/market', 
+        `${API_BASE_URL}/api/v1/market`, 
         productToAdd, 
         {
           headers: authHeaders,
@@ -342,9 +371,8 @@ const Market = () => {
         }
       );
       
-      console.log(productResponse)
       // Step 4: Add the new product to the local state
-      const addedProduct = productResponse.data.product; // Assuming your API returns the created product
+      const addedProduct = productResponse.data.product;
       
       const updatedProducts = [...products, addedProduct];
       setProducts(updatedProducts);
@@ -366,7 +394,6 @@ const Market = () => {
         price: '',
         description: '',
         stock: '',
-        rating: 5,
         image: null,
         imageFile: null
       });
@@ -393,7 +420,48 @@ const Market = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Register product submission callback
+  useEffect(() => {
+    registerCallback('submitProductForm', handleSubmitProduct);
+  }, [newProduct]);
+
   
+  // Render rating or "No ratings" message
+  const renderRating = (product) => {
+    if (!product.numRatings || product.numRatings === 0) {
+      return <span className="no-ratings">No ratings yet</span>;
+    }
+    
+    // Ensure rating is a valid number between 0 and 5
+    const safeRating = !isNaN(product.averageRating) && product.averageRating !== null ? 
+      Math.max(0, Math.min(5, product.averageRating)) : 0;
+    
+    // Use a safer approach that doesn't rely on String.repeat
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (i <= safeRating) {
+        stars.push('★'); // filled star
+      } else {
+        stars.push('☆'); // empty star
+      }
+    }
+    
+    return (
+      <div className="product-rating">
+        <span className="stars" style={{ color: '#FFD700' }}>
+          {stars.join('')}
+        </span>
+        <span className="rating-value">
+          {safeRating.toFixed(1)} ({product.numRatings})
+        </span>
+      </div>
+    );
+  };
+
+
+
+
   return (
     <div className="market-page">
       <div className="market-header">
@@ -411,15 +479,7 @@ const Market = () => {
             <button className="search-button">Search</button>
             <button 
               className="sell-product-btn" 
-              onClick={() => {
-                if (!isAuthenticated) {
-                  // alert("You must be logged in to sell products. Please log in and try again.");
-                  // Optionally redirect to login page
-                  window.location.href = '/login';
-                } else {
-                  setIsAddProductOpen(true);
-                }
-              }}
+              onClick={handleOpenAddProduct}
               style={{
                 backgroundColor: '#4CAF50',
                 color: 'white',
@@ -491,10 +551,34 @@ const Market = () => {
              <h3>Rating</h3>
               <div className="rating-filter">
                 <label className="rating-option">
-                  <input type="checkbox" /> 4★ & above
+                  <input 
+                    type="checkbox" 
+                    onChange={(e) => {
+                      // Filter products with rating >= 4
+                      if (e.target.checked) {
+                        setFilteredProducts(products.filter(p => p.averageRating >= 4));
+                      } else {
+                        // Reset filter
+                        setFilteredProducts(products);
+                      }
+                    }}
+                  /> 
+                  4★ & above
                 </label>
                 <label className="rating-option">
-                  <input type="checkbox" /> 3★ & above
+                  <input 
+                    type="checkbox"
+                    onChange={(e) => {
+                      // Filter products with rating >= 3
+                      if (e.target.checked) {
+                        setFilteredProducts(products.filter(p => p.averageRating >= 3));
+                      } else {
+                        // Reset filter
+                        setFilteredProducts(products);
+                      }
+                    }}
+                  /> 
+                  3★ & above
                 </label>
               </div>
             </div>
@@ -503,15 +587,34 @@ const Market = () => {
               <h3>Availability</h3>
               <div className="availability-filter">
                 <label className="availability-option">
-                  <input type="checkbox" /> In Stock
-                </label>
-                <label className="availability-option">
-                  <input type="checkbox" /> Ships in 24 Hours
+                  <input 
+                    type="checkbox"
+                    onChange={(e) => {
+                      // Filter in-stock products
+                      if (e.target.checked) {
+                        setFilteredProducts(products.filter(p => p.stock > 0));
+                      } else {
+                        // Reset filter
+                        setFilteredProducts(products);
+                      }
+                    }}
+                  /> 
+                  In Stock
                 </label>
               </div>
             </div>
             
-            <button className="reset-filters-btn">Reset Filters</button>
+            <button 
+              className="reset-filters-btn"
+              onClick={() => {
+                setActiveCategory('all');
+                setPriceRange([0, 100]);
+                setSearchQuery('');
+                setFilteredProducts(products);
+              }}
+            >
+              Reset Filters
+            </button>
           </aside>
           
           {/* Main product grid */}
@@ -543,12 +646,11 @@ const Market = () => {
             ) : filteredProducts.length > 0 ? (
               <div className="products-grid">
                 {filteredProducts.map(product => (
-                  <div className="product-card" key={product.id}>
+                  <div className="product-card" key={product.id || product._id}>
                     {product.badge && (
                       <span className="product-badge">{product.badge}</span>
                     )}
                     
-                    {/* Replace this placeholder div with an actual image */}
                     <div className="product-image-container">
                       <img 
                         src={product.image} 
@@ -556,7 +658,7 @@ const Market = () => {
                         className="product-image" 
                         onError={handleImageError}
                       />
-                      {/* Add Quick View and Add to Cart buttons */}
+                      {/* Quick View and Add to Cart buttons */}
                       <div className="product-hover-buttons">
                         <button 
                           className="product-quick-view-btn"
@@ -577,19 +679,17 @@ const Market = () => {
                       <h3 className="product-name">{product.name}</h3>
                       <div className="product-meta">
                         <div className="product-category">{product.category}</div>
-                        <div className="product-rating">
-                          <span className="stars">{'★'.repeat(Math.floor(product.rating))}</span>
-                          <span className="rating-value">{product.rating}</span>
-                        </div>
+                        {/* Updated Rating Display */}
+                        {renderRating(product)}
                       </div>
                       <p className="product-description">{product.description.substring(0, 80)}...</p>
                       <div className="product-price-row">
                         <span className="product-price">${product.price.toFixed(2)}</span>
                         <button 
-                          className={`wishlist-btn ${isInWishlist(product.id) ? 'active' : ''}`}
-                          onClick={() => handleWishlistToggle(product.id)}
+                          className={`wishlist-btn ${isInWishlist(product.id || product._id) ? 'active' : ''}`}
+                          onClick={() => handleWishlistToggle(product.id || product._id)}
                         >
-                          {isInWishlist(product.id) ? '❤️' : '♡'}
+                          {isInWishlist(product.id || product._id) ? '❤️' : '♡'}
                         </button>
                       </div>
                       <div className="product-actions">
@@ -628,10 +728,6 @@ const Market = () => {
           </main>
         </div>
       </div>
-      
-
-      
-
       
       {/* Add Product Overlay Form */}
       {isAddProductOpen && (
@@ -698,7 +794,7 @@ const Market = () => {
                   id="name" 
                   name="name"
                   value={newProduct.name}
-                  onChange={handleProductChange}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
                   required
                   style={{
                     width: '100%',
@@ -718,7 +814,7 @@ const Market = () => {
                     id="category" 
                     name="category"
                     value={newProduct.category}
-                    onChange={handleProductChange}
+                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                     required
                     style={{
                       width: '100%',
@@ -749,7 +845,7 @@ const Market = () => {
                     min="0.01" 
                     step="0.01"
                     value={newProduct.price}
-                    onChange={handleProductChange}
+                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
                     required
                     style={{
                       width: '100%',
@@ -769,7 +865,7 @@ const Market = () => {
                   id="description" 
                   name="description"
                   value={newProduct.description}
-                  onChange={handleProductChange}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                   rows="4"
                   required
                   style={{
@@ -782,49 +878,25 @@ const Market = () => {
                 ></textarea>
               </div>
               
-              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label htmlFor="stock" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                    Stock Quantity *
-                  </label>
-                  <input 
-                    type="number" 
-                    id="stock" 
-                    name="stock"
-                    min="1" 
-                    value={newProduct.stock}
-                    onChange={handleProductChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      borderRadius: '4px',
-                      border: '1px solid #ddd',
-                    }}
-                  />
-                </div>
-                
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label htmlFor="rating" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                    Initial Rating (1-5)
-                  </label>
-                  <input 
-                    type="number" 
-                    id="rating" 
-                    name="rating"
-                    min="1" 
-                    max="5" 
-                    step="0.1"
-                    value={newProduct.rating}
-                    onChange={handleProductChange}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      borderRadius: '4px',
-                      border: '1px solid #ddd',
-                    }}
-                  />
-                </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label htmlFor="stock" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Stock Quantity *
+                </label>
+                <input 
+                  type="number" 
+                  id="stock" 
+                  name="stock"
+                  min="1" 
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
               </div>
               
               <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -909,10 +981,16 @@ const Market = () => {
           </div>
         </>
       )}
-      
 
+      {/* Product Quick View Modal */}
+      <ProductQuickView 
+        product={quickViewProduct}
+        isOpen={isQuickViewOpen}
+        onClose={closeQuickView}
+        onProductUpdate={handleProductUpdate}
+      />
     </div>
   );
-  };
-  
-  export default Market;
+};
+
+export default Market;
