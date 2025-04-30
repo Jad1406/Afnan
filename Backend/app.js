@@ -17,6 +17,7 @@ const reviewRouter = require('./routes/ReviewRoutes');
 const utilRouter = require('./routes/utils');
 const communityRouter = require('./routes/communityRoutes');
 const educationRouter = require('./routes/Education');
+const aiChatRoutes = require("./routes/aiChat");
 
 
 // error handler
@@ -53,6 +54,7 @@ app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/community', communityRouter);
 app.use("/api/v1/utils",utilRouter);
 app.use('/api/v1/education', educationRouter);
+app.use("/api/v1/ai", aiChatRoutes);
 
 //error handling
 app.use(notFoundMiddleware);

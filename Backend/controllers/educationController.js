@@ -356,6 +356,7 @@ const createAnswersData = async (req, res) => {
   try {
     // Check if the question exists
     const foundQuestion = await Questions.findById(question);
+
     if (!foundQuestion) {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Question not found' });
     }
