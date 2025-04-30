@@ -12,6 +12,7 @@ import Community from './pages/Community';
 import Education from './pages/Education';
 import Market from './pages/Market';
 import Tracker from './pages/Tracker';
+import AI from './pages/AiChat';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -62,6 +63,7 @@ function App() {
           <Route path="/education" element={<Education />} />
           <Route path="/market" element={<Market />} />
           <Route path="/tracker" element={<Tracker />} />
+          <Route path="/ai" element={<AI />} />
         </Routes>
         
         {/* Footer would go here */}
