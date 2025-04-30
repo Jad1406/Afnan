@@ -1,35 +1,23 @@
-// Navbar.jsx
+// Navbar.jsx with Auth
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
+import { useCart } from '../../CartContext';
+import { useWishlist } from '../../WishlistContext';
 
-const Navbar = () => {
-  const [darkMode, setDarkMode] = useState(false);
+const Navbar = ({ darkMode, toggleDarkMode, isAuthenticated, onLogout }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
-
-  // Handle theme toggling
-  useEffect(() => {
-    const isDark = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(isDark);
-    if (isDark) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
-    if (newDarkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  };
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  
+  const navigate = useNavigate();
+  
+  // Get cart context
+  const { cartItemCount, toggleCart } = useCart();
+  
+  // Get wishlist context
+  const { wishlistCount, toggleWishlist } = useWishlist();
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -46,6 +34,32 @@ const Navbar = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+  
+  // Handle logout
+  const handleLogout = () => {
+    setProfileMenuOpen(false);
+    
+    if (onLogout) {
+      onLogout();
+    } else {
+      localStorage.removeItem('token');
+      navigate('/login');
+    }
+  };
+  
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileMenuOpen && !event.target.closest('.profile-menu-container')) {
+        setProfileMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileMenuOpen]);
 
   return (
     <nav className={`navbar ${scrolled ? 'scrolled' : ''} ${darkMode ? 'dark' : 'light'}`}>
@@ -109,11 +123,53 @@ const Navbar = () => {
           </button>
           
           <div className="user-actions">
-            <button className="cart-button">
-              <span className="cart-icon">🛒</span>
-              <span className="cart-count">3</span>
+            {/* Wishlist button */}
+            <button className="wishlist-button" onClick={toggleWishlist}>
+              <span className="wishlist-icon">❤️</span>
+              {wishlistCount > 0 && (
+                <span className="wishlist-count">{wishlistCount}</span>
+              )}
             </button>
-            <button className="profile-button">👤</button>
+            
+            {/* Cart button */}
+            <button className="cart-button" onClick={toggleCart}>
+              <span className="cart-icon">🛒</span>
+              <span className="cart-count">{cartItemCount}</span>
+            </button>
+            
+            {/* Profile button with authentication state */}
+            <div className="profile-menu-container">
+              <button 
+                className="profile-button"
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              >
+                {isAuthenticated ? '👤' : '🔑'}
+              </button>
+              
+              {profileMenuOpen && (
+                <div className="profile-dropdown">
+                  {isAuthenticated ? (
+                    <>
+                      <Link to="/profile" className="profile-menu-item">My Profile</Link>
+                      <Link to="/orders" className="profile-menu-item">My Orders</Link>
+                      <Link to="/settings" className="profile-menu-item">Settings</Link>
+                      <div className="profile-menu-divider"></div>
+                      <button 
+                        className="profile-menu-item logout-button"
+                        onClick={handleLogout}
+                      >
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login" className="profile-menu-item">Login</Link>
+                      <Link to="/signup" className="profile-menu-item">Sign Up</Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
@@ -130,6 +186,15 @@ const Navbar = () => {
             <li><Link to="/education" onClick={() => {setActiveTab('education'); setMenuOpen(false)}}>Education</Link></li>
             <li><Link to="/market" onClick={() => {setActiveTab('market'); setMenuOpen(false)}}>Market</Link></li>
             <li><Link to="/tracker" onClick={() => {setActiveTab('tracker'); setMenuOpen(false)}}>Tracker</Link></li>
+            {!isAuthenticated && (
+              <>
+                <li><Link to="/login" onClick={() => setMenuOpen(false)}>Login</Link></li>
+                <li><Link to="/signup" onClick={() => setMenuOpen(false)}>Sign Up</Link></li>
+              </>
+            )}
+            {isAuthenticated && (
+              <li><button className="mobile-logout-btn" onClick={handleLogout}>Logout</button></li>
+            )}
           </ul>
           <div className="mobile-search">
             <input type="text" placeholder="Search plants..." />
