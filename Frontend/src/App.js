@@ -1,5 +1,4 @@
-
-// App.js with AuthProvider
+// App.js with proper Router/AuthProvider ordering
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar/Navbar';
@@ -8,7 +7,7 @@ import FeaturedPlants from './components/FeaturedPlants/FeaturedPlants';
 import PlantChatbot from './components/PlantChatbot/PlantChatbot';
 import { CartProvider } from './CartContext';
 import { WishlistProvider } from './WishlistContext';
-import { AuthProvider, useAuth } from './components/Auth/AuthContext'; // Import AuthProvider and useAuth hook
+import { AuthProvider, useAuth } from './components/Auth/AuthContext';
 import CartSidebar from './CartSidebar';
 import WishlistSidebar from './WishlistSidebar';
 import Login from './components/Auth/Login';
@@ -35,13 +34,9 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Main App component without authentication logic (will be handled by AuthContext)
-function AppContent() {
+function App() {
   const [darkMode, setDarkMode] = useState(false);
   
-  // Get authentication state from AuthContext
-  const { isAuthenticated } = useAuth();
-
   useEffect(() => {
     // Check for user preference in localStorage
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -71,79 +66,77 @@ function AppContent() {
     setDarkMode(!darkMode);
   };
 
+  // CRITICAL CHANGE: Router MUST be outside AuthProvider if AuthProvider uses navigation hooks
   return (
     <Router>
       <AuthProvider>
-  <CartProvider>
-    <WishlistProvider>
-    
-        <div className={`app ${darkMode ? 'dark' : 'light'}`}>
-          {/* Only show Navbar on non-auth pages */}
-          <Routes>
-            <Route path="/login" element={null} />
-            <Route path="/signup" element={null} />
-            <Route path="*" element={
-              <Navbar 
-                darkMode={darkMode} 
-                toggleDarkMode={toggleDarkMode} 
-                isAuthenticated={isAuthenticated}
-                // onLogout={handleLogout}
-              />
-            } />
-          </Routes>
-          
-          <Routes>
-            {/* Auth routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            
-            {/* Main routes */}
-            <Route path="/" element={
-              <main className="home-page">
-                <HeroSection />
-                <FeaturedPlants />
-                {/* Add more homepage sections here */}
-              </main>
-            } />
-            <Route path="/community" element={<Community />} />
-            <Route path="/education" element={<Education />} />
-            <Route path="/market" element={<Market />} />
-            
-            {/* Protected routes */}
-            <Route path="/tracker" element={
-              <ProtectedRoute>
-                <Tracker />
-              </ProtectedRoute>
-            } />
-            
-            {/* AI route from ChatBot branch */}
-            <Route path="/ai" element={<AI />} />
-          </Routes>
-          
-          {/* Don't show cart/wishlist sidebars on auth pages */}
-          <Routes>
-            <Route path="/login" element={null} />
-            <Route path="/signup" element={null} />
-            <Route path="*" element={
-              <>
-                <CartSidebar />
-                <WishlistSidebar />
-              </>
-            } />
-          </Routes>
-          
-          {/* Chatbot component - available on all pages except auth */}
-          <Routes>
-            <Route path="/login" element={null} />
-            <Route path="/signup" element={null} />
-            <Route path="*" element={<PlantChatbot />} />
-          </Routes>
-        </div>
-    </WishlistProvider>
-  </CartProvider>
-  </AuthProvider>
-
-</Router>
-)};
+        <CartProvider>
+          <WishlistProvider>
+            <div className={`app ${darkMode ? 'dark' : 'light'}`}>
+              {/* Only show Navbar on non-auth pages */}
+              <Routes>
+                <Route path="/login" element={null} />
+                <Route path="/signup" element={null} />
+                <Route path="*" element={
+                  <Navbar 
+                    darkMode={darkMode} 
+                    toggleDarkMode={toggleDarkMode} 
+                  />
+                } />
+              </Routes>
+              
+              <Routes>
+                {/* Auth routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                
+                {/* Main routes */}
+                <Route path="/" element={
+                  <main className="home-page">
+                    <HeroSection />
+                    <FeaturedPlants />
+                    {/* Add more homepage sections here */}
+                  </main>
+                } />
+                <Route path="/community" element={<Community />} />
+                <Route path="/education" element={<Education />} />
+                <Route path="/market" element={<Market />} />
+                
+                {/* Protected routes */}
+                <Route path="/tracker" element={
+                  <ProtectedRoute>
+                    <Tracker />
+                  </ProtectedRoute>
+                } />
+                
+                {/* AI route */}
+                <Route path="/ai" element={<AI />} />
+              </Routes>
+              
+              {/* Don't show cart/wishlist sidebars on auth pages */}
+              <Routes>
+                <Route path="/login" element={null} />
+                <Route path="/signup" element={null} />
+                <Route path="*" element={
+                  <>
+                    <CartSidebar />
+                    <WishlistSidebar />
+                  </>
+                } />
+              </Routes>
+              
+              {/* Chatbot component - available on all pages except auth */}
+              <Routes>
+                <Route path="/login" element={null} />
+                <Route path="/signup" element={null} />
+                <Route path="*" element={<PlantChatbot />} />
+              </Routes>
+            </div>
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
 
 export default App;

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-
 const AiChat = () => {
   const [userMessage, setUserMessage] = useState("");
   const [response, setResponse] = useState("");
@@ -10,13 +9,16 @@ const AiChat = () => {
     setLoading(true);
     setResponse("");
 
+    const backendUrl =  "http://localhost:3000";
+
     try {
-      const res = await fetch("http://localhost:5000/api/v1/ai/ai-chat", {
+      const res = await fetch(`${backendUrl}/api/v1/ai/ai-chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage }),
       });
-
+      console.log(userMessage);
+      console.log("Response status:", res.status);
       const data = await res.json();
       setResponse(data.response);
     } catch (err) {
