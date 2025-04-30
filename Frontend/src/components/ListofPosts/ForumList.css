@@ -1,0 +1,30 @@
+.forum-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  color: #555;
+  font-style: italic;
+}
+
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  text-align: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 30px 20px;
+  color: #757575;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  margin: 20px 0;
+}

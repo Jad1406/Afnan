@@ -1,10 +1,17 @@
-// Market.jsx 
+
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
 import './Market.css';
 import { useCart } from '../CartContext';
-import { useWishlist } from '../WishlistContext'; // Import useWishlist
+import { useWishlist } from '../WishlistContext';
+import { useAuth } from '../components/Auth/AuthContext';
 import ProductQuickView from '../components/ProductQuickView/ProductQuickView';
+import ProductRating from '../components/ProductRating/ProductRating';
 import ClipLoader from 'react-spinners/ClipLoader';
+
+// Consistent API base URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 const Market = () => {
   // State for products and filters
@@ -18,6 +25,17 @@ const Market = () => {
   const [sortBy, setSortBy] = useState('featured');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    category: '',
+    price: '',
+    description: '',
+    stock: '',
+    image: null,
+    imageFile: null
+  });
   
   // State for quick view
   const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -28,152 +46,63 @@ const Market = () => {
   
   // Get wishlist context
   const { toggleWishlistItem, isInWishlist } = useWishlist();
-
-  // Mock product data for testing
-  const mockProducts = [
-    {
-      id: 101,
-      name: "Monstera Deliciosa",
-      category: "indoor",
-      price: 45.99,
-      description: "The Monstera Deliciosa, or Swiss Cheese Plant, is known for its stunning split leaves. This popular houseplant is easy to care for and makes a dramatic statement in any space with its large, glossy foliage.",
-      image: "/images/plant1.jpg",
-      rating: 4.8,
-      stock: 15,
-      badge: "Popular",
-      tags: ["air purifying", "low light"]
-    },
-    {
-      id: 102,
-      name: "Snake Plant",
-      category: "indoor",
-      price: 29.99,
-      description: "One of the most carefree houseplants you can grow, the Snake Plant (Sansevieria) thrives on neglect. Its striking upright leaves with yellow edges purify air and can survive in low light conditions, making it perfect for beginners.",
-      image: "/images/plant2.jpg",
-      rating: 4.9,
-      stock: 20,
-      badge: "Best Seller",
-      tags: ["air purifying", "drought tolerant"]
-    },
-    {
-      id: 103,
-      name: "Fiddle Leaf Fig",
-      category: "indoor",
-      price: 59.99,
-      description: "The Fiddle Leaf Fig (Ficus lyrata) is famous for its large, violin-shaped leaves and elegant appearance. This stunning statement plant thrives in bright, indirect light and adds a touch of sophistication to any interior space.",
-      image: "/images/plant3.jpg",
-      rating: 4.5,
-      stock: 8,
-      badge: null,
-      tags: ["bright light", "statement"]
-    },
-    {
-      id: 104,
-      name: "Lavender",
-      category: "outdoor",
-      price: 19.99,
-      description: "Lavender is a versatile, aromatic herb beloved for its calming fragrance and beautiful purple blooms. Drought-tolerant and sun-loving, it's perfect for gardens, containers, and even indoors with sufficient light.",
-      image: "/images/plant4.jpg",
-      rating: 4.7,
-      stock: 25,
-      badge: "New",
-      tags: ["fragrant", "drought tolerant"]
-    },
-    {
-      id: 105,
-      name: "String of Pearls",
-      category: "hanging",
-      price: 24.99,
-      description: "The String of Pearls (Senecio rowleyanus) features unique round bead-like leaves that cascade down its stems, creating a stunning hanging display. This drought-tolerant succulent requires minimal water and makes a perfect hanging plant for any home.",
-      image: "/images/plant5.jpg",
-      rating: 4.6,
-      stock: 12,
-      badge: null,
-      tags: ["succulent", "trailing"]
-    },
-    {
-      id: 106,
-      name: "ZZ Plant",
-      category: "indoor",
-      price: 34.99,
-      description: "The ZZ Plant (Zamioculcas zamiifolia) is practically indestructible, thriving in low light and requiring minimal water. Its glossy, dark green leaves grow from thick rhizomes that store water, making it extremely drought-tolerant and perfect for beginners.",
-      image: "/images/plant6.jpg",
-      rating: 4.9,
-      stock: 18,
-      badge: "Low Maintenance",
-      tags: ["low light", "drought tolerant"]
-    },
-    {
-      id: 107,
-      name: "Terracotta Pot Set",
-      category: "accessories",
-      price: 39.99,
-      description: "This set of 3 terracotta pots in various sizes is perfect for your houseplant collection. These classic clay pots provide excellent drainage and airflow for plant roots, promoting healthy growth.",
-      image: "/images/accessory1.jpg",
-      rating: 4.8,
-      stock: 20,
-      badge: "Value Pack",
-      tags: ["pots", "accessories"]
-    },
-    {
-      id: 108,
-      name: "Premium Potting Soil",
-      category: "accessories",
-      price: 15.99,
-      description: "Our premium potting soil blend is specially formulated for indoor plants. Rich in organic matter and balanced nutrients, it provides the perfect growing medium for your houseplants.",
-      image: "/images/accessory2.jpg",
-      rating: 4.7,
-      stock: 50,
-      badge: null,
-      tags: ["soil", "accessories"]
-    }
-  ];
-
+  
+  // Get auth context
+  const { isAuthenticated, requireAuth, registerCallback } = useAuth();
+  
   // Initialize products and categories on component mount
   useEffect(() => {
     setLoading(true);
     
-    // Simulating API fetch with setTimeout
-    setTimeout(() => {
-      try {
-        // Use mock data for now
-        setProducts(mockProducts);
-        setFilteredProducts(mockProducts);
-        
-        // Extract unique categories
-        const uniqueCategories = [...new Set(mockProducts.map(product => product.category))];
-        setCategories(uniqueCategories);
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setError(error.toString());
-        setLoading(false);
-      }
-    }, 1000);
+    // Get authentication token if available
+    const token = localStorage.getItem('token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    // In a real implementation, you would fetch from your API:
-    /*
     axios
-      .get('http://localhost:3000/api/v1/market/public', { withCredentials: true })
+      .get(`${API_BASE_URL}/api/v1/market/public`, { 
+        withCredentials: true,
+        headers
+      })
       .then(response => {
         let productsData = response.data.products;
+        if(!productsData || productsData.length === 0) {
+          console.error('No products found in the response');
+        } else {
+          console.log('Fetched products:', productsData);
+        }
         setProducts(productsData);
         setFilteredProducts(productsData);
-
-        // Extract unique categories
-        const uniqueCategories = [...new Set(productsData.map(product => product.category))];
-        setCategories(uniqueCategories);
-        
         setLoading(false);
       })
       .catch(error => {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching products:', error.message, error.response);
         setLoading(false);
       });
-    */
   }, []);
-
+  
+  // Register callbacks for actions that require authentication
+  useEffect(() => {
+    registerCallback('addProductToWishlist', (productId) => {
+      const product = products.find(p => p.id === productId || p._id === productId);
+      if (product) {
+        toggleWishlistItem(product);
+      }
+    });
+    
+    registerCallback('openAddProductModal', () => {
+      setIsAddProductOpen(true);
+    });
+    
+    registerCallback('addProductToCart', (product) => {
+      addToCart(product);
+    });
+    
+    registerCallback('openProductQuickView', (product) => {
+      setQuickViewProduct(product);
+      setIsQuickViewOpen(true);
+    });
+  }, [products]);
+  
   // Filter products when filters change
   useEffect(() => {
     let result = [...products];
@@ -206,7 +135,8 @@ const Market = () => {
         result.sort((a, b) => b.price - a.price);
         break;
       case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
+        // Use averageRating instead of rating
+        result.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
         break;
       default:
         // 'featured' - no specific sorting
@@ -216,11 +146,19 @@ const Market = () => {
     setFilteredProducts(result);
   }, [activeCategory, priceRange, searchQuery, sortBy, products]);
   
-  // Handle wishlist toggle
+  // Handle wishlist toggle with authentication
   const handleWishlistToggle = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      toggleWishlistItem(product);
+    if (requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'addProductToWishlist',
+        args: [productId]
+      }
+    })) {
+      const product = products.find(p => p.id === productId || p._id === productId);
+      if (product) {
+        toggleWishlistItem(product);
+      }
     }
   };
   
@@ -229,6 +167,7 @@ const Market = () => {
     if (event) {
       event.stopPropagation();
     }
+    
     addToCart(product);
     
     // Optional: Give user feedback that item was added
@@ -242,20 +181,52 @@ const Market = () => {
       }, 1500);
     }
   };
-  
-  // Handle quick view
+
+  // Handle quick view with authentication check if needed
   const handleQuickView = (product, event) => {
     if (event) {
       event.stopPropagation();
     }
-    setQuickViewProduct(product);
-    setIsQuickViewOpen(true);
+    
+    // Make sure we have a valid product before opening
+    if (product && (product.id || product._id)) {
+      setQuickViewProduct(product);
+      setIsQuickViewOpen(true);
+    } else {
+      console.error("Attempted to open quick view with invalid product:", product);
+    }
   };
   
-  // Close quick view
+  // closeQuickView function
   const closeQuickView = () => {
     setIsQuickViewOpen(false);
-    setQuickViewProduct(null);
+    
+    // Delay clearing the product to prevent rendering issues
+    setTimeout(() => {
+      setQuickViewProduct(null);
+    }, 300);
+  };
+  
+  // Handle product updates (after rating changes)
+  const handleProductUpdate = (updatedProduct) => {
+    // First, update the product in the products array
+    const updatedProducts = products.map(product => 
+      (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
+    );
+    
+    setProducts(updatedProducts);
+
+    // Also update the filtered products to ensure the UI reflects the change
+    setFilteredProducts(prevFiltered => {
+      return prevFiltered.map(product => 
+        (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
+      );
+    });
+    
+    // Update quickViewProduct if it's the one being rated
+    if (quickViewProduct && (quickViewProduct.id === updatedProduct.id || quickViewProduct._id === updatedProduct._id)) {
+      setQuickViewProduct(updatedProduct);
+    }
   };
   
   // Handle image error
@@ -263,6 +234,233 @@ const Market = () => {
     e.target.onerror = null; // Prevent infinite error loop
     e.target.src = "https://via.placeholder.com/300x300?text=Product+Image"; 
   };
+  
+  // Handle opening add product modal with authentication check
+  const handleOpenAddProduct = () => {
+    if (requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'openAddProductModal',
+        args: []
+      }
+    })) {
+      setIsAddProductOpen(true);
+    }
+  };
+  
+  // Check if user is authenticated and fetch categories on mount
+  useEffect(() => {
+    // Get predefined categories from backend
+    const fetchCategories = async () => {
+      try {
+        const categoriesResponse = await axios.get(
+          `${API_BASE_URL}/api/v1/market/categories`
+        );
+        
+        if (categoriesResponse.data && categoriesResponse.data.categories) {
+          setCategories(categoriesResponse.data.categories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+  
+  // Handle image upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // File size validation (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        console.log("File is too large. Maximum size is 5MB.");
+        return;
+      }
+      
+      // File type validation
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        console.log("Invalid file type. Please upload JPEG, PNG, or WebP images.");
+        return;
+      }
+      
+      // Read the file as base64 for preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewProduct({
+          ...newProduct,
+          image: reader.result,
+          imageFile: file
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  // Handle form submission for new product with authentication check
+  const handleSubmitProduct = async (e) => {
+    e.preventDefault();
+    
+    // Check authentication before proceeding
+    if (!requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'submitProductForm',
+        args: []
+      }
+    })) {
+      return;
+    }
+    
+    try {
+      // Set submitting state to true
+      setIsSubmitting(true);
+      
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token');
+      
+      // Create headers with authentication
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+      
+      const formDataHeaders = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      // Step 1: Upload image to Firebase
+      let imageUrl = null;
+      
+      if (newProduct.imageFile) {
+        // Create form data for the image upload
+        const formData = new FormData();
+        formData.append('media', newProduct.imageFile);
+        
+        // Upload image to your Firebase endpoint with folder parameter
+        const imageResponse = await axios.post(
+          `${API_BASE_URL}/api/v1/utils/upload-image?folder=products`, 
+          formData, 
+          {
+            headers: formDataHeaders,
+            withCredentials: true
+          }
+        );
+        
+        // Get the image URL from the response
+        imageUrl = imageResponse.data.imageUrl;
+      }
+      
+      // Step 2: Create the product object with the image URL
+      const productToAdd = {
+        name: newProduct.name,
+        category: newProduct.category,
+        price: parseFloat(newProduct.price),
+        description: newProduct.description,
+        stock: parseInt(newProduct.stock),
+        image: imageUrl
+      };
+      
+      // Step 3: Send the product data to MongoDB API
+      const productResponse = await axios.post(
+        `${API_BASE_URL}/api/v1/market`, 
+        productToAdd, 
+        {
+          headers: authHeaders,
+          withCredentials: true
+        }
+      );
+      
+      // Step 4: Add the new product to the local state
+      const addedProduct = productResponse.data.product;
+      
+      const updatedProducts = [...products, addedProduct];
+      setProducts(updatedProducts);
+      setFilteredProducts(updatedProducts);
+      
+      // Add new category if it doesn't exist
+      if (!categories.includes(addedProduct.category) && addedProduct.category) {
+        setCategories([...categories, addedProduct.category]);
+      }
+      
+      // Success message
+      console.log("Product added successfully!");
+      alert("Product added successfully!");
+      
+      // Reset form and close modal
+      setNewProduct({
+        name: '',
+        category: '',
+        price: '',
+        description: '',
+        stock: '',
+        image: null,
+        imageFile: null
+      });
+      setIsAddProductOpen(false);
+      
+    } catch (error) {
+      // Handle errors
+      console.error("Error adding product:", error);
+      
+      // Check for specific error types
+      if (error.response) {
+        if (error.response.status === 401) {
+          alert("Authentication failed. Please log in again.");
+        } else if (error.response.status === 403) {
+          alert("You don't have permission to add products.");
+        } else {
+          alert(`Failed to add product: ${error.response.data?.msg || 'Server error'}`);
+        }
+      } else {
+        alert("Failed to add product. Please try again.");
+      }
+    } finally {
+      // Reset submitting state
+      setIsSubmitting(false);
+    }
+  };
+
+  // Register product submission callback
+  useEffect(() => {
+    registerCallback('submitProductForm', handleSubmitProduct);
+  }, [newProduct]);
+
+  
+  // Render rating or "No ratings" message
+  const renderRating = (product) => {
+    if (!product.numRatings || product.numRatings === 0) {
+      return <span className="no-ratings">No ratings yet</span>;
+    }
+    
+    // Ensure rating is a valid number between 0 and 5
+    const safeRating = !isNaN(product.averageRating) && product.averageRating !== null ? 
+      Math.max(0, Math.min(5, product.averageRating)) : 0;
+    
+    // Use a safer approach that doesn't rely on String.repeat
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (i <= safeRating) {
+        stars.push('★'); // filled star
+      } else {
+        stars.push('☆'); // empty star
+      }
+    }
+    
+    return (
+      <div className="product-rating">
+        <span className="stars" style={{ color: '#FFD700' }}>
+          {stars.join('')}
+        </span>
+        <span className="rating-value">
+          {safeRating.toFixed(1)} ({product.numRatings})
+        </span>
+      </div>
+    );
+  };
+
+
+
 
   return (
     <div className="market-page">
@@ -279,6 +477,22 @@ const Market = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <button className="search-button">Search</button>
+            <button 
+              className="sell-product-btn" 
+              onClick={handleOpenAddProduct}
+              style={{
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '4px',
+                marginLeft: '10px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Sell a Product
+            </button>
           </div>
         </div>
       </div>
@@ -334,13 +548,37 @@ const Market = () => {
             </div>
             
             <div className="filter-section">
-              <h3>Rating</h3>
+             <h3>Rating</h3>
               <div className="rating-filter">
                 <label className="rating-option">
-                  <input type="checkbox" /> 4★ & above
+                  <input 
+                    type="checkbox" 
+                    onChange={(e) => {
+                      // Filter products with rating >= 4
+                      if (e.target.checked) {
+                        setFilteredProducts(products.filter(p => p.averageRating >= 4));
+                      } else {
+                        // Reset filter
+                        setFilteredProducts(products);
+                      }
+                    }}
+                  /> 
+                  4★ & above
                 </label>
                 <label className="rating-option">
-                  <input type="checkbox" /> 3★ & above
+                  <input 
+                    type="checkbox"
+                    onChange={(e) => {
+                      // Filter products with rating >= 3
+                      if (e.target.checked) {
+                        setFilteredProducts(products.filter(p => p.averageRating >= 3));
+                      } else {
+                        // Reset filter
+                        setFilteredProducts(products);
+                      }
+                    }}
+                  /> 
+                  3★ & above
                 </label>
               </div>
             </div>
@@ -349,15 +587,34 @@ const Market = () => {
               <h3>Availability</h3>
               <div className="availability-filter">
                 <label className="availability-option">
-                  <input type="checkbox" /> In Stock
-                </label>
-                <label className="availability-option">
-                  <input type="checkbox" /> Ships in 24 Hours
+                  <input 
+                    type="checkbox"
+                    onChange={(e) => {
+                      // Filter in-stock products
+                      if (e.target.checked) {
+                        setFilteredProducts(products.filter(p => p.stock > 0));
+                      } else {
+                        // Reset filter
+                        setFilteredProducts(products);
+                      }
+                    }}
+                  /> 
+                  In Stock
                 </label>
               </div>
             </div>
             
-            <button className="reset-filters-btn">Reset Filters</button>
+            <button 
+              className="reset-filters-btn"
+              onClick={() => {
+                setActiveCategory('all');
+                setPriceRange([0, 100]);
+                setSearchQuery('');
+                setFilteredProducts(products);
+              }}
+            >
+              Reset Filters
+            </button>
           </aside>
           
           {/* Main product grid */}
@@ -382,14 +639,14 @@ const Market = () => {
             </div>
             
             {loading ? (
-              <div className="loading-container">
+              <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
                 <ClipLoader color="#4CAF50" size={60} loading={loading} />
-                <p>Loading products...</p>
+                <p style={{ marginLeft: '15px', fontSize: '18px' }}>Loading products...</p>
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="products-grid">
                 {filteredProducts.map(product => (
-                  <div className="product-card" key={product.id}>
+                  <div className="product-card" key={product.id || product._id}>
                     {product.badge && (
                       <span className="product-badge">{product.badge}</span>
                     )}
@@ -401,8 +658,7 @@ const Market = () => {
                         className="product-image" 
                         onError={handleImageError}
                       />
-                      
-                      {/* Add Quick View and Add to Cart buttons */}
+                      {/* Quick View and Add to Cart buttons */}
                       <div className="product-hover-buttons">
                         <button 
                           className="product-quick-view-btn"
@@ -423,19 +679,17 @@ const Market = () => {
                       <h3 className="product-name">{product.name}</h3>
                       <div className="product-meta">
                         <div className="product-category">{product.category}</div>
-                        <div className="product-rating">
-                          <span className="stars">{'★'.repeat(Math.floor(product.rating))}</span>
-                          <span className="rating-value">{product.rating}</span>
-                        </div>
+                        {/* Updated Rating Display */}
+                        {renderRating(product)}
                       </div>
                       <p className="product-description">{product.description.substring(0, 80)}...</p>
                       <div className="product-price-row">
                         <span className="product-price">${product.price.toFixed(2)}</span>
                         <button 
-                          className={`wishlist-btn ${isInWishlist(product.id) ? 'active' : ''}`}
-                          onClick={() => handleWishlistToggle(product.id)}
+                          className={`wishlist-btn ${isInWishlist(product.id || product._id) ? 'active' : ''}`}
+                          onClick={() => handleWishlistToggle(product.id || product._id)}
                         >
-                          {isInWishlist(product.id) ? '❤️' : '♡'}
+                          {isInWishlist(product.id || product._id) ? '❤️' : '♡'}
                         </button>
                       </div>
                       <div className="product-actions">
@@ -475,79 +729,265 @@ const Market = () => {
         </div>
       </div>
       
-      {/* Promotional section */}
-      <section className="promo-section container">
-        <div className="promo-header">
-          <h2>Special Offers</h2>
-          <p>Limited time deals on select products</p>
-        </div>
-        
-        <div className="promotions">
-          <div className="promo-card">
-            <div className="promo-content">
-              <h3>Summer Sale</h3>
-              <p>20% off all outdoor plants</p>
-              <span className="promo-code">SUMMER20</span>
-              <button className="promo-btn">Shop Now</button>
-            </div>
-          </div>
+      {/* Add Product Overlay Form */}
+      {isAddProductOpen && (
+        <>
+          <div 
+            className="product-form-overlay"
+            onClick={() => setIsAddProductOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 999,
+            }}
+          ></div>
           
-          <div className="promo-card">
-            <div className="promo-content">
-              <h3>Bundle & Save</h3>
-              <p>Buy any 3 plants, get the 4th free</p>
-              <span className="promo-code">BUNDLE4</span>
-              <button className="promo-btn">Shop Now</button>
-            </div>
-          </div>
-          
-          <div className="promo-card">
-            <div className="promo-content">
-              <h3>New Arrivals</h3>
-              <p>First-time customers get 10% off</p>
-              <span className="promo-code">WELCOME10</span>
-              <button className="promo-btn">Shop Now</button>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Shipping policy section */}
-      <section className="shipping-section">
-        <div className="container">
-          <div className="shipping-features">
-            <div className="shipping-feature">
-              <div className="feature-icon">🚚</div>
-              <h3>Free Shipping</h3>
-              <p>On all orders over $50</p>
-            </div>
-            
-            <div className="shipping-feature">
-              <div className="feature-icon">🪴</div>
-              <h3>Plant Guarantee</h3>
-              <p>30-day guarantee on all plants</p>
-            </div>
-            
-            <div className="shipping-feature">
-              <div className="feature-icon">🔄</div>
-              <h3>Easy Returns</h3>
-              <p>Simple return process</p>
+          <div 
+            className="product-form-container"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '90%',
+              maxWidth: '600px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '20px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+              zIndex: 1000,
+            }}
+          >
+            <div className="product-form-header" style={{ marginBottom: '20px' }}>
+              <h2 style={{ marginBottom: '10px' }}>Sell a New Product</h2>
+              <p style={{ color: '#666' }}>List your plant or gardening item for sale</p>
+              <button 
+                className="close-form-btn"
+                onClick={() => setIsAddProductOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
             </div>
             
-            <div className="shipping-feature">
-              <div className="feature-icon">🌐</div>
-              <h3>Nationwide Delivery</h3>
-              <p>We ship to all 50 states</p>
-            </div>
+            <form onSubmit={handleSubmitProduct}>
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label htmlFor="name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Product Name *
+                </label>
+                <input 
+                  type="text" 
+                  id="name" 
+                  name="name"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
+              </div>
+              
+              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="category" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Category *
+                  </label>
+                  <select 
+                    id="category" 
+                    name="category"
+                    value={newProduct.category}
+                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="price" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Price ($) *
+                  </label>
+                  <input 
+                    type="number" 
+                    id="price" 
+                    name="price"
+                    min="0.01" 
+                    step="0.01"
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd',
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label htmlFor="description" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Description *
+                </label>
+                <textarea 
+                  id="description" 
+                  name="description"
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                  rows="4"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    resize: 'vertical',
+                  }}
+                ></textarea>
+              </div>
+              
+              <div className="form-group" style={{ flex: 1 }}>
+                <label htmlFor="stock" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Stock Quantity *
+                </label>
+                <input 
+                  type="number" 
+                  id="stock" 
+                  name="stock"
+                  min="1" 
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label htmlFor="image" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Product Image *
+                </label>
+                <input 
+                  type="file" 
+                  id="image" 
+                  name="image"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  required={!newProduct.image}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
+                
+                {newProduct.image && (
+                  <div className="image-preview" style={{ marginTop: '10px' }}>
+                    <img 
+                      src={newProduct.image} 
+                      alt="Product preview" 
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        objectFit: 'contain',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="form-actions" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddProductOpen(false)}
+                  disabled={isSubmitting}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#f5f5f5',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <ClipLoader color="#ffffff" size={20} loading={true} style={{ marginRight: '10px' }} />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    'List Product'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        </div>
-      </section>
-      
+        </>
+      )}
+
       {/* Product Quick View Modal */}
       <ProductQuickView 
         product={quickViewProduct}
         isOpen={isQuickViewOpen}
         onClose={closeQuickView}
+        onProductUpdate={handleProductUpdate}
       />
     </div>
   );

@@ -1,0 +1,259 @@
+.forum-post {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 25px;
+  box-shadow: var(--shadow-light);
+}
+
+.dark .forum-post {
+  background-color: #2a2a2a;
+  box-shadow: var(--shadow-dark);
+}
+
+.post-header {
+  margin-bottom: 15px;
+}
+
+.post-title {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+}
+
+.post-meta {
+  display: flex;
+  gap: 15px;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.dark .post-meta {
+  color: #aaa;
+}
+
+.post-solved {
+  background: #4caf50;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.post-content {
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tag {
+  background-color: #f1f8e9;
+  color: var(--primary-color);
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.dark .tag {
+  background-color: #1e3320;
+  color: var(--primary-light);
+}
+
+.post-replies {
+  background-color: #f9f9f4;
+  padding: 20px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+}
+
+.dark .post-replies {
+  background-color: #333;
+}
+
+.post-replies h4 {
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.reply {
+  margin-bottom: 15px;
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  transition: margin-left 0.2s ease;
+}
+
+.reply[style*="margin-left"] {
+  border-left: 3px solid #e0e0e0;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reply-author {
+  font-weight: 600;
+}
+
+.reply-date {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.dark .reply-date {
+  color: #aaa;
+}
+
+.reply-content {
+  line-height: 1.5;
+}
+
+.reply-actions {
+  margin-top: 8px;
+  display: flex;
+}
+
+.reply-action-button, 
+.like-action-button {
+  background: none;
+  border: none;
+  color: #4caf50;
+  cursor: pointer;
+  margin-right: 15px;
+  padding: 2px 0;
+  font-size: 14px;
+}
+
+.nested-reply-form {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.nested-reply-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 80px;
+  margin-bottom: 10px;
+}
+
+.reply-form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.reply-form-buttons button {
+  margin-left: 10px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-button {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+}
+
+.submit-button {
+  background: #4caf50;
+  color: white;
+  border: none;
+}
+
+.no-replies {
+  font-style: italic;
+  color: #777;
+  padding: 10px 0;
+}
+
+.add-reply {
+  margin-top: 15px;
+}
+
+.add-reply textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 80px;
+  margin-bottom: 10px;
+}
+
+.reply-button {
+  background: #4caf50;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.auth-prompt {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+}
+
+.auth-prompt-text {
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.login-button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.post-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-button {
+  background-color: #f1f8e9;
+  color: var(--primary-color);
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.dark .action-button {
+  background-color: #1e3320;
+  color: var(--primary-light);
+}
+
+.action-button:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.dark .action-button:hover {
+  background-color: var(--primary-light);
+}
