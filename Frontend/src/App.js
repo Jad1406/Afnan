@@ -19,6 +19,7 @@ import Community from './pages/Community';
 import Education from './pages/Education';
 import Market from './pages/Market';
 import Tracker from './pages/Tracker';
+import AI from './pages/AiChat';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -77,72 +78,170 @@ function App() {
   };
 
   return (
-    <CartProvider>
-      <WishlistProvider>
-        <Router>
-          <div className={`app ${darkMode ? 'dark' : 'light'}`}>
-            {/* Only show Navbar on non-auth pages */}
-            <Routes>
-              <Route path="/login" element={null} />
-              <Route path="/signup" element={null} />
-              <Route path="*" element={
-                <Navbar 
-                  darkMode={darkMode} 
-                  toggleDarkMode={toggleDarkMode} 
-                  isAuthenticated={isAuthenticated}
-                  onLogout={handleLogout}
-                />
-              } />
-            </Routes>
+  <CartProvider>
+    <WishlistProvider>
+      <Router>
+        <div className={`app ${darkMode ? 'dark' : 'light'}`}>
+          {/* Only show Navbar on non-auth pages */}
+          <Routes>
+            <Route path="/login" element={null} />
+            <Route path="/signup" element={null} />
+            <Route path="*" element={
+              <Navbar 
+                darkMode={darkMode} 
+                toggleDarkMode={toggleDarkMode} 
+                isAuthenticated={isAuthenticated}
+                onLogout={handleLogout}
+              />
+            } />
+          </Routes>
+          
+          <Routes>
+            {/* Auth routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             
-            <Routes>
-              {/* Auth routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+            {/* Main routes */}
+            <Route path="/" element={
+              <main className="home-page">
+                <HeroSection />
+                <FeaturedPlants />
+                {/* Add more homepage sections here */}
+              </main>
+            } />
+            <Route path="/community" element={<Community />} />
+            <Route path="/education" element={<Education />} />
+            <Route path="/market" element={<Market />} />
+            
+            {/* Protected routes */}
+            <Route path="/tracker" element={
+              <ProtectedRoute>
+                <Tracker />
+              </ProtectedRoute>
+            } />
+            
+            {/* AI route from ChatBot branch */}
+            <Route path="/ai" element={<AI />} />
+          </Routes>
+          
+          {/* Don't show cart/wishlist sidebars on auth pages */}
+          <Routes>
+            <Route path="/login" element={null} />
+            <Route path="/signup" element={null} />
+            <Route path="*" element={
+              <>
+                <CartSidebar />
+                <WishlistSidebar />
+              </>
+            } />
+          </Routes>
+          
+          {/* Chatbot component - available on all pages except auth */}
+          <Routes>
+            <Route path="/login" element={null} />
+            <Route path="/signup" element={null} />
+            <Route path="*" element={<PlantChatbot />} />
+          </Routes>
+        </div>
+      </Router>
+    </WishlistProvider>
+  </CartProvider>
+);
+//   return (
+// <<<<<<< ChatBot
+//     <Router>
+//       <div className={`app ${darkMode ? 'dark' : 'light'}`}>
+//         <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+        
+//         <Routes>
+//           <Route path="/" element={
+//             <main className="home-page">
+//               <HeroSection />
+//               <FeaturedPlants />
+//               {/* Add more homepage sections here */}
+//             </main>
+//           } />
+//           <Route path="/community" element={<Community />} />
+//           <Route path="/education" element={<Education />} />
+//           <Route path="/market" element={<Market />} />
+//           <Route path="/tracker" element={<Tracker />} />
+//           <Route path="/ai" element={<AI />} />
+//         </Routes>
+        
+//         {/* Footer would go here */}
+        
+//         {/* Chatbot component - available on all pages */}
+//         <PlantChatbot />
+//       </div>
+//     </Router>
+// =======
+//     <CartProvider>
+//       <WishlistProvider>
+//         <Router>
+//           <div className={`app ${darkMode ? 'dark' : 'light'}`}>
+//             {/* Only show Navbar on non-auth pages */}
+//             <Routes>
+//               <Route path="/login" element={null} />
+//               <Route path="/signup" element={null} />
+//               <Route path="*" element={
+//                 <Navbar 
+//                   darkMode={darkMode} 
+//                   toggleDarkMode={toggleDarkMode} 
+//                   isAuthenticated={isAuthenticated}
+//                   onLogout={handleLogout}
+//                 />
+//               } />
+//             </Routes>
+            
+//             <Routes>
+//               {/* Auth routes */}
+//               <Route path="/login" element={<Login />} />
+//               <Route path="/signup" element={<Signup />} />
               
-              {/* Main routes */}
-              <Route path="/" element={
-                <main className="home-page">
-                  <HeroSection />
-                  <FeaturedPlants />
-                  {/* Add more homepage sections here */}
-                </main>
-              } />
-              <Route path="/community" element={<Community />} />
-              <Route path="/education" element={<Education />} />
-              <Route path="/market" element={<Market />} />
+//               {/* Main routes */}
+//               <Route path="/" element={
+//                 <main className="home-page">
+//                   <HeroSection />
+//                   <FeaturedPlants />
+//                   {/* Add more homepage sections here */}
+//                 </main>
+//               } />
+//               <Route path="/community" element={<Community />} />
+//               <Route path="/education" element={<Education />} />
+//               <Route path="/market" element={<Market />} />
               
-              {/* Protected routes */}
-              <Route path="/tracker" element={
-                <ProtectedRoute>
-                  <Tracker />
-                </ProtectedRoute>
-              } />
-            </Routes>
+//               {/* Protected routes */}
+//               <Route path="/tracker" element={
+//                 <ProtectedRoute>
+//                   <Tracker />
+//                 </ProtectedRoute>
+//               } />
+//             </Routes>
             
-            {/* Don't show cart/wishlist sidebars on auth pages */}
-            <Routes>
-              <Route path="/login" element={null} />
-              <Route path="/signup" element={null} />
-              <Route path="*" element={
-                <>
-                  <CartSidebar />
-                  <WishlistSidebar />
-                </>
-              } />
-            </Routes>
+//             {/* Don't show cart/wishlist sidebars on auth pages */}
+//             <Routes>
+//               <Route path="/login" element={null} />
+//               <Route path="/signup" element={null} />
+//               <Route path="*" element={
+//                 <>
+//                   <CartSidebar />
+//                   <WishlistSidebar />
+//                 </>
+//               } />
+//             </Routes>
             
-            {/* Chatbot component - available on all pages except auth */}
-            <Routes>
-              <Route path="/login" element={null} />
-              <Route path="/signup" element={null} />
-              <Route path="*" element={<PlantChatbot />} />
-            </Routes>
-          </div>
-        </Router>
-      </WishlistProvider>
-    </CartProvider>
-  );
-}
+//             {/* Chatbot component - available on all pages except auth */}
+//             <Routes>
+//               <Route path="/login" element={null} />
+//               <Route path="/signup" element={null} />
+//               <Route path="*" element={<PlantChatbot />} />
+//             </Routes>
+//           </div>
+//         </Router>
+//       </WishlistProvider>
+//     </CartProvider>
+// >>>>>>> main
+//   );
+// }
 
 export default App;
