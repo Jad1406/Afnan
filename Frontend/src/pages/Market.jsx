@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 
 import axios from 'axios';
 
@@ -29,6 +29,7 @@ const Market = () => {
   const [isEditingMaxPrice, setIsEditingMaxPrice] = useState(false);
   const [minPriceInput, setMinPriceInput] = useState("0");
   const [maxPriceInput, setMaxPriceInput] = useState("1000");  const [searchQuery, setSearchQuery] = useState('');
+  const [inStock, setInStock] = useState(false);
 
   const [sortBy, setSortBy] = useState('featured');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -58,36 +59,244 @@ const Market = () => {
   
   // Get auth context
   const { isAuthenticated, requireAuth, registerCallback } = useAuth();
+
+  // Pagination state
+const [currentPage, setCurrentPage] = useState(1);
+const [totalPages, setTotalPages] = useState(1);
+const [totalItems, setTotalItems] = useState(0);
+const [itemsPerPage, setItemsPerPage] = useState(12);
+const [loadingMore, setLoadingMore] = useState(false);
+
+// Last element reference for infinite scroll
+const lastProductRef = useRef(null);
+const observer = useRef(null);
+// Debounced search input (prevents making API calls for each keystroke)
+const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+const searchTimeoutRef = useRef(null);
   
-  // Initialize products and categories on component mount
-  useEffect(() => {
+
+
+// Modified useEffect to include inStock in dependencies
+useEffect(() => {
+  fetchProducts();
+}, [currentPage, activeCategory, minPrice, maxPrice, debouncedSearchQuery, minRatingFilter, sortBy, inStock]);
+
+// New function to debounce search input
+useEffect(() => {
+  if (searchTimeoutRef.current) {
+    clearTimeout(searchTimeoutRef.current);
+  }
+  
+  searchTimeoutRef.current = setTimeout(() => {
+    setDebouncedSearchQuery(searchQuery);
+    // Reset to first page when search query changes
+    setCurrentPage(1);
+  }, 500); // 500ms delay
+  
+  return () => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
+}, [searchQuery]);
+
+// Intersection Observer for infinite scroll
+useEffect(() => {
+  if (loading || loadingMore || currentPage >= totalPages) return;
+  
+  const options = {
+    root: null,
+    rootMargin: '100px',
+    threshold: 0.05
+  };
+  
+  const handleObserver = (entries) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && currentPage < totalPages) {
+      loadMoreProducts();
+    }
+  };
+  
+  observer.current = new IntersectionObserver(handleObserver, options);
+  
+  if (lastProductRef.current) {
+    observer.current.observe(lastProductRef.current);
+  }
+  
+  return () => {
+    if (observer.current) {
+      observer.current.disconnect();
+    }
+  };
+}, [loading, loadingMore, currentPage, totalPages]);
+
+// New function to fetch products with server-side filtering and pagination
+const fetchProducts = async () => {
+  // setLoading(true);
+  // setError(null);
+
+
+   // For first page, show loading and clear existing products
+   if (currentPage === 1) {
     setLoading(true);
-    
+    setProducts([]);
+    setFilteredProducts([]);
+  }
+  setError(null);
+
+  try {
     // Get authentication token if available
     const token = localStorage.getItem('token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    axios
-      .get(`${API_BASE_URL}/api/v1/market/public`, { 
+    // Build query parameters for server-side filtering
+    const params = new URLSearchParams();
+    params.append('page', currentPage);
+    params.append('limit', itemsPerPage);
+    
+    // Add filters
+    if (activeCategory && activeCategory !== 'all') {
+      params.append('category', activeCategory);
+    }
+    
+    if (minPrice > 0) {
+      params.append('minPrice', minPrice);
+    }
+    
+    if (maxPrice) {
+      params.append('maxPrice', maxPrice);
+    }
+    
+    if (debouncedSearchQuery) {
+      params.append('search', debouncedSearchQuery);
+    }
+    
+    if (minRatingFilter > 0) {
+      params.append('minRating', minRatingFilter);
+    }
+    
+    if (sortBy && sortBy !== 'featured') {
+      params.append('sort', sortBy);
+    }
+
+    if (inStock === true) {
+      params.append('stock', 1);
+    }
+    console.log('In stock:', params.toString());
+    const response = await axios.get(
+      `${API_BASE_URL}/api/v1/market/public?${params.toString()}`, 
+      { 
         withCredentials: true,
-        headers
-      })
-      .then(response => {
-        let productsData = response.data.products;
-        if(!productsData || productsData.length === 0) {
-          console.error('No products found in the response');
-        } else {
-          // console.log('Fetched products:', productsData);
-        }
-        setProducts(productsData);
-        setFilteredProducts(productsData);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching products:', error.message, error.response);
-        setLoading(false);
-      });
-  }, []);
+        headers 
+      }
+    );
+    
+    const { products: fetchedProducts, pagination } = response.data;
+    
+    if (!fetchedProducts || fetchedProducts.length === 0) {
+      console.error('No products found in the response');
+    }
+    
+
+    
+    // For first page, replace products; for subsequent pages with infinite scroll, append
+    if (currentPage === 1) {
+      setProducts(fetchedProducts);
+      setFilteredProducts(fetchedProducts);
+    } else {
+      setProducts(prev => [...prev, ...fetchedProducts]);
+      setFilteredProducts(prev => [...prev, ...fetchedProducts]);    
+    }
+    // Update pagination data
+    if (pagination) {
+      setTotalPages(pagination.totalPages || 1);
+      setTotalItems(pagination.totalItems || 0);
+      setItemsPerPage(pagination.itemsPerPage || 12);
+    }
+
+
+  } catch (error) {
+    console.error('Error fetching products:', error.message, error.response);
+    setError('Failed to load products. Please try again.');
+  } finally {
+    setLoading(false);
+    setLoadingMore(false);   }
+};
+
+// const updateFilters = (newFilterValues) => {
+//   // Reset to page 1 when filters change
+//   setCurrentPage(1);
+  
+//   // Update the relevant filter state
+//   if ('category' in newFilterValues) {
+//     setActiveCategory(newFilterValues.category);
+//   }
+  
+//   if ('minPrice' in newFilterValues) {
+//     setMinPrice(newFilterValues.minPrice);
+//     setMinPriceInput(newFilterValues.minPrice.toString());
+//   }
+  
+//   if ('maxPrice' in newFilterValues) {
+//     setMaxPrice(newFilterValues.maxPrice);
+//     setMaxPriceInput(newFilterValues.maxPrice.toString());
+//   }
+  
+//   if ('minRating' in newFilterValues) {
+//     setMinRatingFilter(newFilterValues.minRating);
+//   }
+  
+//   if ('searchQuery' in newFilterValues) {
+//     setSearchQuery(newFilterValues.searchQuery);
+//   }
+  
+//   if ('sortBy' in newFilterValues) {
+//     setSortBy(newFilterValues.sortBy);
+//   }
+  
+//   if ('inStock' in newFilterValues) {
+//     setInStock(newFilterValues.inStock);
+//   }
+//   console.log('Filters updated:', newFilterValues);
+// };
+
+
+// New function to load more products (for infinite scroll)
+const loadMoreProducts = () => {
+  if (loadingMore || currentPage >= totalPages) return;
+  
+  setLoadingMore(true);
+  setCurrentPage(prev => prev + 1);
+  // setLoadingMore(false);
+};
+
+// Update your existing handleSearch function to use server-side search
+const handleSearch = (e) => {
+  e.preventDefault();
+  // The debounced effect will trigger the actual search
+};
+
+
+// Improved resetFilters function that resets all filter states
+const resetFilters = () => {
+  setActiveCategory('all');
+  setMinPrice(0);
+  setMaxPrice(1000);
+  setMinPriceInput("0");
+  setMaxPriceInput("1000");
+  setSearchQuery('');
+  setDebouncedSearchQuery('');
+  setMinRatingFilter(0);
+  setSortBy('featured');
+  setInStock(false);
+  setCurrentPage(1);
+};
+
+
+
+
+
+
   
   // Register callbacks for actions that require authentication
   useEffect(() => {
@@ -114,55 +323,7 @@ const Market = () => {
 
   }, [products]);
   
-  // Filter products when filters change
-  useEffect(() => {
-    let result = [...products];
-    
-    // Filter by category
-    if (activeCategory !== 'all') {
-      result = result.filter(product => product.category === activeCategory);
-    }
-    
-    // Filter by price range
-    result = result.filter(product => 
-      product.price >= minPrice && product.price <= maxPrice
-    );
-    
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(product => 
-        product.name.toLowerCase().includes(query) || 
-        product.description.toLowerCase().includes(query)
-      );
-    }
 
-    // Apply rating filter if active
-
-    if (minRatingFilter > 0) {
-      result = result.filter(p => (p.averageRating || 0) >= minRatingFilter);
-    }
-    
-    // Sort products
-    switch(sortBy) {
-      case 'price-low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        // Use averageRating instead of rating
-        result.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
-        break;
-      default:
-        // 'featured' - no specific sorting
-        break;
-    }
-    
-    setFilteredProducts(result);
-  }, [activeCategory, minPrice, maxPrice, searchQuery, sortBy, products, minRatingFilter]);
-  
   // Handle wishlist toggle with authentication
   const handleWishlistToggle = (productId) => {
     if (requireAuth({
@@ -224,29 +385,11 @@ const handleAddToCart = (product, event, quantity = 1) => {
       setQuickViewProduct(null);
     }, 300);
   };
-  
-  // Handle product updates (after rating changes)
-  // const handleProductUpdate = (updatedProduct) => {
-  //   // First, update the product in the products array
-  //   const updatedProducts = products.map(product => 
-  //     (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
-  //   );
-    
-  //   setProducts(updatedProducts);
 
-  //   // Also update the filtered products to ensure the UI reflects the change
-  //   setFilteredProducts(prevFiltered => {
-  //     return prevFiltered.map(product => 
-  //       (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
-  //     );
-  //   });
-    
-  //   // Update quickViewProduct if it's the one being rated
-  //   if (quickViewProduct && (quickViewProduct.id === updatedProduct.id || quickViewProduct._id === updatedProduct._id)) {
-  //     setQuickViewProduct(updatedProduct);
-  //   }
-  // };
-  // 2. Replace your handleProductUpdate function with this improved version
+
+
+
+
 const handleProductUpdate = (updatedProduct) => {
   // Get the ID of the updated product
   const updatedProductId = updatedProduct._id;
@@ -637,6 +780,8 @@ const handleProductUpdate = (updatedProduct) => {
       
       {/* Main Market Content */}
       <div className="market-content container">
+
+      
         <div className="market-layout">
           {/* Sidebar with filters */}
           <aside className="market-sidebar">
@@ -815,19 +960,16 @@ const handleProductUpdate = (updatedProduct) => {
             <div className="filter-section">
               <h3>Availability</h3>
               <div className="availability-filter">
-                <label className="availability-option">
-                  <input 
-                    type="checkbox"
-                    onChange={(e) => {
-                      // Filter in-stock products
-                      if (e.target.checked) {
-                        setFilteredProducts(products.filter(p => p.stock > 0));
-                      } else {
-                        // Reset filter
-                        setFilteredProducts(products);
-                      }
-                    }}
-                  /> 
+              <label className="availability-option">
+                <input 
+                  type="checkbox"
+                  checked={inStock}
+                  onChange={(e) => {
+                    // Update the inStock filter state
+                    setInStock(e.target.checked);
+                    console.log('In Stock filter:', inStock);
+                  }}
+                /> 
                   In Stock
                 </label>
               </div>
@@ -835,13 +977,7 @@ const handleProductUpdate = (updatedProduct) => {
             
             <button 
               className="reset-filters-btn"
-              onClick={() => {
-                setActiveCategory('all');
-                setMinPrice(0);
-                setMaxPrice(1000);
-                setSearchQuery('');
-                setMinRatingFilter(0);
-                setFilteredProducts(products);
+              onClick={() => {resetFilters();
               }}
             >
               Reset Filters
@@ -851,9 +987,11 @@ const handleProductUpdate = (updatedProduct) => {
           {/* Main product grid */}
           <main className="market-main">
             <div className="market-controls">
-              <div className="results-count">
-                {loading ? 'Loading products...' : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} found`}
-              </div>
+            <div className="results-count">
+              {loading ? 'Loading products...' : 
+                `Showing ${filteredProducts.length} of ${totalItems} product${totalItems !== 1 ? 's' : ''}`
+              }
+            </div>
               <div className="sort-control">
                 <label htmlFor="sort-select">Sort by:</label>
                 <select 
@@ -876,8 +1014,12 @@ const handleProductUpdate = (updatedProduct) => {
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="products-grid">
-                {filteredProducts.map(product => (
-                  <div className="product-card" key={product.id || product._id}>
+                {filteredProducts.map((product,index) => (
+                    <div 
+                    className="product-card" 
+                    key={product.id || product._id}
+                    ref={index === filteredProducts.length - 1 ? lastProductRef : null}
+                  >
                     {product.badge && (
                       <span className="product-badge">{product.badge}</span>
                     )}
@@ -897,12 +1039,16 @@ const handleProductUpdate = (updatedProduct) => {
                         >
                           Quick View
                         </button>
-                        <button 
+                        {product.stock>0?(<button 
                           className="product-add-cart-btn"
                           onClick={(e) => handleAddToCart(product, e)}
                         >
                           Add to Cart
-                        </button>
+                        </button>):
+                        (<button 
+                          className="product-out-of-stock-btn"
+                          disabled
+                      > Out of Stock</button>)}
                       </div>
                     </div>
                     
@@ -940,6 +1086,20 @@ const handleProductUpdate = (updatedProduct) => {
                     </div>
                   </div>
                 ))}
+                {/* Loading more products indicator */}
+                {loadingMore && (
+                    <div className="loading-more" style={{ 
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      width: '100%',
+                      background: 'rgba(255,255,255,0.8)',
+                      zIndex: 5
+                    }}>
+                      <ClipLoader color="#4CAF50" size={30} loading={loadingMore} />
+                      <p style={{ marginLeft: '10px' }}>Loading more products...</p>
+                    </div>
+                  )}
               </div>
             ) : (
               <div className="no-results">
@@ -947,19 +1107,16 @@ const handleProductUpdate = (updatedProduct) => {
                 <button 
               className="reset-filters-btn"
               onClick={() => {
-                setActiveCategory('all');
-                setMinPrice(0);
-                setMaxPrice(1000);
-                setSearchQuery('');
-                setMinRatingFilter(0);
-                setFilteredProducts(products);
-              }}
+              resetFilters(); }}
             >
               Reset Filters
             </button>
               </div>
             )}
+
           </main>
+
+
         </div>
       </div>
       

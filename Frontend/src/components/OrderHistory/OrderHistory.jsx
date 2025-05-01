@@ -4,11 +4,44 @@ import { useCart } from '../../CartContext';
 import './OrderHistory.css';
 
 const OrderHistory = () => {
-  const { fetchOrders, orders, isLoading, error, cancelOrder } = useCart();
+  const { fetchOrders, orders, isLoading, error, cancelOrder, refreshCartFromServer  } = useCart();
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    // Force a cart refresh from server when the orders page loads
+    const initPage = async () => {
+      setIsRefreshing(true);
+      try {
+        // First refresh the cart from server to ensure it's in sync
+        await refreshCartFromServer();
+        // Then fetch orders
+        await fetchOrders();
+      } catch (err) {
+        console.error('Error initializing orders page:', err);
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+    
+    initPage();
+  }, []);
+
+    // Add a manual refresh function for the user
+    const handleRefresh = async () => {
+      setIsRefreshing(true);
+      try {
+        await refreshCartFromServer();
+        await fetchOrders();
+      } catch (err) {
+        console.error('Error refreshing data:', err);
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
   
   useEffect(() => {
     loadOrders();
@@ -152,7 +185,7 @@ const OrderHistory = () => {
         <div className="error-message">
           <h3>Error Loading Orders</h3>
           <p>{error}</p>
-          <button className="btn" onClick={loadOrders}>Try Again</button>
+          <button className="btn" onClick={handleRefresh}>Try Again</button>
         </div>
       </div>
     );

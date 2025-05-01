@@ -80,6 +80,147 @@ router.post('/create-payment-intent', auth,async (req, res) => {
  * @desc    Confirm payment and create order
  * @access  Private
  */
+// router.post('/confirm', auth,async (req, res) => {
+//   try {
+//     const userId = req.user.userId;
+//     const { 
+//       paymentIntentId, 
+//       shippingAddress, 
+//       paymentMethod = 'credit_card',
+//       paymentDetails = {},
+//       notes = ''
+//     } = req.body;
+    
+//     console.log(`Confirming payment for intent: ${paymentIntentId}`);
+    
+//     if (!paymentIntentId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Payment intent ID is required'
+//       });
+//     }
+    
+//     if (!shippingAddress) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Shipping address is required'
+//       });
+//     }
+    
+//     // Retrieve payment intent from Stripe to verify payment
+//     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+//     console.log(`Payment intent status: ${paymentIntent.status}`);
+    
+//     if (paymentIntent.status !== 'succeeded') {
+//       return res.status(400).json({
+//         success: false,
+//         message: `Payment has not been completed. Status: ${paymentIntent.status}`
+//       });
+//     }
+    
+//     // Verify this payment is for this user
+//     if (paymentIntent.metadata.userId !== userId.toString()) {
+//       console.log(`User ID mismatch. Payment user: ${paymentIntent.metadata.userId}, Request user: ${userId}`);
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Unauthorized payment confirmation'
+//       });
+//     }
+    
+//     // Find the cart
+//     const cart = await Cart.findOne({
+//       _id: paymentIntent.metadata.cartId,
+//       user: userId,
+//       active: true
+//     });
+    
+//     if (!cart) {
+//       console.log(`Cart not found or already processed. Cart ID: ${paymentIntent.metadata.cartId}`);
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Cart not found or already processed'
+//       });
+//     }
+    
+//     console.log(`Found cart with ${cart.items.length} items`);
+    
+//     // Calculate totals
+//     let subtotal = 0;
+//     for (const item of cart.items) {
+//       subtotal += item.price * item.quantity;
+//     }
+    
+//     const taxRate = 0.07;
+//     const taxAmount = parseFloat((subtotal * taxRate).toFixed(2));
+//     const shippingCost = 5.99;
+    
+//     // Extract card information for storing if available
+//     let cardDetails = {};
+//     if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
+//       const charge = paymentIntent.charges.data[0];
+//       if (charge.payment_method_details && charge.payment_method_details.card) {
+//         const card = charge.payment_method_details.card;
+//         cardDetails = {
+//           lastFour: card.last4,
+//           cardType: card.brand,
+//         };
+//       }
+//     }
+    
+//     // Merge provided payment details with extracted card details
+//     const finalPaymentDetails = {
+//       ...paymentDetails,
+//       ...cardDetails,
+//       paymentId: paymentIntentId
+//     };
+    
+//     console.log('Creating order with payment details:', {
+//       paymentMethod,
+//       paymentId: paymentIntentId,
+//       cardType: finalPaymentDetails.cardType,
+//       lastFour: finalPaymentDetails.lastFour ? '****' : 'none' // Mask for logs
+//     });
+    
+//     // Create the order
+//     const order = await Order.create({
+//       user: userId,
+//       items: cart.items,
+//       totalAmount: subtotal,
+//       status: 'processing',
+//       shippingAddress,
+//       paymentMethod,
+//       paymentDetails: finalPaymentDetails,
+//       shippingCost,
+//       taxAmount,
+//       notes
+//     });
+    
+//     console.log(`Order created successfully with ID: ${order._id}`);
+    
+//     // Mark the cart as inactive
+//     cart.active = false;
+//     await cart.save();
+//     console.log(`Cart marked as inactive: ${cart._id}`);
+    
+//     // Update product inventory (optional)
+//     // This could be handled here or with a separate inventory management system
+    
+//     return res.status(201).json({
+//       success: true,
+//       message: 'Order created successfully',
+//       order
+//     });
+//   } catch (error) {
+//     console.error('Error confirming payment:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Failed to process order',
+//       error: error.message
+//     });
+//   }
+// });
+
 router.post('/confirm', auth,async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -88,9 +229,10 @@ router.post('/confirm', auth,async (req, res) => {
       shippingAddress, 
       paymentMethod = 'credit_card',
       paymentDetails = {},
-      notes = ''
+      notes = '',
+      checkoutSummary,
     } = req.body;
-    
+    console.log("recieved req:",req.body);
     console.log(`Confirming payment for intent: ${paymentIntentId}`);
     
     if (!paymentIntentId) {
@@ -131,10 +273,10 @@ router.post('/confirm', auth,async (req, res) => {
     // Find the cart
     const cart = await Cart.findOne({
       _id: paymentIntent.metadata.cartId,
-      user: userId,
       active: true
     });
-    
+    console.log("CARTTTTTTT: ",  cart);
+
     if (!cart) {
       console.log(`Cart not found or already processed. Cart ID: ${paymentIntent.metadata.cartId}`);
       return res.status(404).json({
@@ -143,18 +285,21 @@ router.post('/confirm', auth,async (req, res) => {
       });
     }
     
-    console.log(`Found cart with ${cart.items.length} items`);
+    // // Calculate totals
+    // let subtotal = 0;
+    // for (const item of cart.items) {
+    //   subtotal += item.price * item.quantity;
+    // }
     
-    // Calculate totals
-    let subtotal = 0;
-    for (const item of cart.items) {
-      subtotal += item.price * item.quantity;
-    }
+    // const taxRate = 0.07;
+    // const taxAmount = parseFloat((subtotal * taxRate).toFixed(2));
+    // const shippingCost = 5.99;
     
-    const taxRate = 0.07;
-    const taxAmount = parseFloat((subtotal * taxRate).toFixed(2));
-    const shippingCost = 5.99;
-    
+    // const taxRate = checkoutSummary.taxRate; // Assuming taxRate is provided in the checkout summary
+    const taxAmount = checkoutSummary.taxAmount;
+    const shippingCost = checkoutSummary.shippingCost;
+    const subtotal = checkoutSummary.subtotal;
+    const total = checkoutSummary.total;
     // Extract card information for storing if available
     let cardDetails = {};
     if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
@@ -186,7 +331,7 @@ router.post('/confirm', auth,async (req, res) => {
     const order = await Order.create({
       user: userId,
       items: cart.items,
-      totalAmount: subtotal,
+      totalAmount: total,
       status: 'processing',
       shippingAddress,
       paymentMethod,
@@ -196,21 +341,60 @@ router.post('/confirm', auth,async (req, res) => {
       notes
     });
     
+    // After successfully creating the order:
     console.log(`Order created successfully with ID: ${order._id}`);
+    console.log(`Order created successfully lllllllllll: ${order}`);
     
     // Mark the cart as inactive
     cart.active = false;
     await cart.save();
     console.log(`Cart marked as inactive: ${cart._id}`);
     
-    // Update product inventory (optional)
-    // This could be handled here or with a separate inventory management system
+    // Update product inventory for each item in the order
+    const Product = require('../models/Product'); // Import Product model
     
+    const stockUpdatePromises = order.items.map(async (item) => {
+      try {
+        // Get the product ID (handle both id and _id formats)
+        const productId = item.product || item._id || item.id;
+        
+        if (!productId) {
+          console.warn(`Cannot update stock: No product ID found for item ${item.name}`);
+          return;
+        }
+        
+        // Find the product
+        const product = await Product.findById(productId);
+        
+        if (!product) {
+          console.warn(`Product not found for stock update: ${productId}`);
+          return;
+        }
+        
+        // Calculate new stock level
+        const newStock = Math.max(0, product.stock - item.quantity);
+        console.log(`Updating stock for ${product.name} (${productId}): ${product.stock} → ${newStock}`);
+        
+        // Update the product stock
+        await Product.findByIdAndUpdate(productId, { stock: newStock });
+      } catch (err) {
+        console.error(`Error updating stock for item: ${item.name}`, err);
+        // We don't throw here to allow the order to complete even if stock updates fail
+      }
+    });
+    
+    // Wait for all stock updates to complete (but don't block the response)
+    Promise.all(stockUpdatePromises)
+      .then(() => console.log('All product stock levels updated successfully'))
+      .catch(err => console.error('Error updating some product stock levels:', err));
+    
+    // Return success response immediately
     return res.status(201).json({
       success: true,
       message: 'Order created successfully',
       order
     });
+   
   } catch (error) {
     console.error('Error confirming payment:', error);
     return res.status(500).json({
@@ -220,6 +404,19 @@ router.post('/confirm', auth,async (req, res) => {
     });
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * @route   GET /api/v1/payments/intent/:intentId

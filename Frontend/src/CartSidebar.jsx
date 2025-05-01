@@ -35,7 +35,6 @@ const CartSidebar = () => {
           <>
             <div className="cart-items">
               {cart.map(item => (
-                console.log('Cart item:', item.product),
                 <div className="cart-item" key={item.product}>
                   <div className="cart-item-image">
                     <img 
@@ -68,7 +67,7 @@ const CartSidebar = () => {
                       </div>
                       <button 
                         className="remove-item-btn"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.product)}
                       >
                         Remove
                       </button>
@@ -115,12 +114,12 @@ const CartSidebar = () => {
           <div className="empty-cart">
             <div className="empty-cart-icon">🛒</div>
             <p>Your cart is empty</p>
-            <button 
+            <Link to="/market"
               className="continue-shopping-btn"
               onClick={() => setIsCartOpen(false)}
             >
               Start Shopping
-            </button>
+            </Link>
           </div>
         )}
       </div>

@@ -20,7 +20,7 @@ const ProductRating = ({ product, onReviewAction }) => {
   const { isAuthenticated, user, requireAuth } = useAuth();
   
   // Get the product ID (support both id and _id for MongoDB)
-  const productId = product?.id || product?._id;
+  const productId = product?._id;
   
   // Check if user has already rated this product
   useEffect(() => {
@@ -46,12 +46,11 @@ const ProductRating = ({ product, onReviewAction }) => {
         );
         
         const reviews = response.data.reviews || [];
-        const userId = user?._id;
-        console.log(reviews);
+        const userId = user?.userId || user?._id;
         // Find user's existing review
         const existingReview = reviews.find(review => review.user._id === userId);
-        console.log("userId: ", userId);
-        console.log("existingReview: ",existingReview);
+        // console.log("userId: ", userId);
+        // console.log("existingReview: ",existingReview);
         if (existingReview) {
           setUserReview(existingReview);
           setUserRating(existingReview.rating);

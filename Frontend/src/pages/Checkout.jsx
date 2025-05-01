@@ -27,8 +27,15 @@ const Checkout = () => {
 const CheckoutForm = () => {
   const stripe = useStripe();
   const elements = useElements();
-  const { cart, cartTotal,clearCart, isLoading: cartLoading } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { 
+    cart, 
+    cartTotal, 
+    clearCart, 
+    refreshCartFromServer, 
+    isLoading: cartLoading 
+  } = useCart();
+
+    const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -182,7 +189,6 @@ const CheckoutForm = () => {
       // Log for debugging (mask most of the secret)
       const secretStart = clientSecret.substring(0, 10);
       const secretEnd = clientSecret.substring(clientSecret.length - 5);
-      console.log(`Processing payment with client secret: ${secretStart}...${secretEnd}`);
       
       // Confirm card payment
       const result = await stripe.confirmCardPayment(clientSecret, {
@@ -206,18 +212,20 @@ const CheckoutForm = () => {
       console.log(`Payment succeeded! PaymentIntent ID: ${result.paymentIntent.id}`);
       setSucceeded(true);
       setIsLoading(false);
-      clearCart(); // Clear cart after successful payment
       // Create order
       await createOrder(result.paymentIntent.id);
-      
+      clearCart(); // Clear cart after order is placed
+     
     } catch (error) {
       console.error('Payment error:', error);
       setPaymentError(`Payment failed: ${error.message}`);
       setIsLoading(false);
     }
   };
-  
+  // console.log('Checkout summary:', checkoutSummary);
+  // console.log('CARTTTTTTT:', cart);
   // Create order after successful payment
+
   const createOrder = async (paymentIntentId) => {
     try {
       setOrderProcessing(true);
@@ -238,15 +246,16 @@ const CheckoutForm = () => {
           shippingAddress,
           paymentMethod: 'credit_card',
           paymentDetails: {
-            // These will be overridden by the server with actual card details
             lastFour: '****', 
             cardType: 'card'
           },
-          notes
+          notes,
+          checkoutSummary
         })
       });
       
-      // Handle non-success status
+      console.log('Order creation response:', response);
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || `Server error: ${response.status}`);
@@ -258,7 +267,26 @@ const CheckoutForm = () => {
         throw new Error(data.message || 'Failed to create order');
       }
       
-      console.log('Order created successfully:', data.order._id);
+      console.log('Order created successfully:', data);
+      
+      // Clear the cart with robust error handling
+      let cartCleared = false;
+      try {
+        console.log('Attempting to clear cart...');
+        cartCleared = await clearCart();
+        console.log('Cart clear result:', cartCleared);
+        
+        if (!cartCleared) {
+          console.warn('Cart clear returned false, forcing refresh from server');
+          await refreshCartFromServer();
+        }
+      } catch (cartError) {
+        console.error('Error during cart clearing:', cartError);
+        // Don't prevent navigation on cart clearing errors, but log them
+      }
+      
+      // Add a small delay to allow server-side operations to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Navigate to success page
       navigate(`/order-success/${data.order._id}`);

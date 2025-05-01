@@ -26,12 +26,8 @@ export const AuthProvider = ({ children }) => {
   const getUserFromToken = (token) => {
     try {
       const user = jwtDecode(token);
-      console.log('Decoded user info:', user);
       // Extract relevant user data from token
-      // Adjust these fields based on what your JWT token contains
-      return {
-        user
-      };
+      return  user;
     } catch (error) {
       console.error('Error decoding token:', error);
       return null;
@@ -48,7 +44,7 @@ export const AuthProvider = ({ children }) => {
           try {
             // Get user info directly from the token
             const userInfo = getUserFromToken(token);
-            
+
             // Optionally verify token validity with backend
             const response = await axios.get(`${API_BASE_URL}/api/v1/auth/verify`, {
               headers: {

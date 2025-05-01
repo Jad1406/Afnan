@@ -64,7 +64,7 @@ app.use("/api/v1/utils",utilRouter);
 app.use('/api/v1/education', educationRouter);
 app.use("/api/v1/ai", aiChatRoutes);
 app.use('/api/v1/cart', cartRoutes );
-app.use('/api/v1/orders', orderRoutes); // Register the order routes
+app.use('/api/v1/orders', orderRoutes); 
 app.use('/api/v1/payments', paymentRoutes); // Register the payment routes
 
 

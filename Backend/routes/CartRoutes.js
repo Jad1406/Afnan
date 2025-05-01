@@ -123,8 +123,16 @@ router.post('/add', auth, async (req, res) => {
     
     if (existingItemIndex >= 0) {
       // Update existing item quantity
-      cart.items[existingItemIndex].quantity += parseInt(quantity);
-    } else {
+      const newQuantity = cart.items[existingItemIndex].quantity + parseInt(quantity);
+      if (newQuantity > product.stock) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot add ${quantity} more. Only ${product.stock - cart.items[existingItemIndex].quantity} more in stock`
+        });
+      }
+      cart.items[existingItemIndex].quantity = newQuantity;
+    }
+    else {
       // Add new item to cart
       cart.items.push({
         product: productId,
@@ -161,7 +169,13 @@ router.put('/item/:productId', auth, async (req, res) => {
     const userId = req.user.userId;
     const { productId } = req.params;
     const { quantity } = req.body;
-    
+    const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Product not found'
+        });
+      }
     // Validate quantity
     const newQuantity = parseInt(quantity);
     if (isNaN(newQuantity) || newQuantity < 1) {
@@ -170,6 +184,14 @@ router.put('/item/:productId', auth, async (req, res) => {
         message: 'Quantity must be a positive number' 
       });
     }
+    else if (newQuantity > product.stock) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Only ${product.stock} items available in stock`
+        });
+      }
+      
+    
     
     // Find user's active cart
     const cart = await Cart.findOne({ user: userId, active: true });
