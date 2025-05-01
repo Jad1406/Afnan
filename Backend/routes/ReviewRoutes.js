@@ -1,30 +1,3 @@
-// const express = require('express')
-// const router = express.Router()
-
-// // controllers
-// const {
-//   getProductReviews,
-//   createReview,
-//   deleteReview
-// } = require('../controllers/ReviewController')
-
-// // middleware
-// const auth = require('../middleware/authentication')
-// const asyncWrapper = require('../middleware/async')
-
-// // Routes
-// // Public - Get reviews for a product
-// router.get('/product/:productId', asyncWrapper(getProductReviews))
-
-// // Protected - Create a review (requires authentication)
-// router.post('/product/:productId', auth, asyncWrapper(createReview))
-
-
-// // Protected - Delete a review (user can only delete their own review)
-// router.delete('/:reviewId', auth, asyncWrapper(deleteReview))
-
-// module.exports = router
-
 
 
 
@@ -45,7 +18,7 @@ router.get('/product/:productId', getProductReviews)
 // Protected routes
 router.post('/product/:productId', authenticateUser, createReview)
 router.delete('/:reviewId', authenticateUser, deleteReview)
-router.patch('/product/:productId',authenticateUser, updateReview)
+router.patch('/:reviewId',authenticateUser, updateReview)
 
 // Admin routes
 router.delete('/admin/:reviewId', authenticateUser, isAdmin, adminDeleteReview)

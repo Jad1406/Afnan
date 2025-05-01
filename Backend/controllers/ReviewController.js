@@ -242,22 +242,24 @@ const createReview = async (req, res) => {
 const updateReview = async (req, res) => {
   const { productId } = req.params
   const { rating, comment } = req.body
-  
+  const { reviewId } = req.params
+  console.log("REviewID"+reviewId)
+
   // Validate input
   if (!rating || rating < 1 || rating > 5) {
     throw new BadRequestError('Please provide a valid rating between 1 and 5')
   }
   
   // Find user's existing review
-  const existingReview = await Review.findOne({
-    product: productId,
-    user: req.user.userId
-  })
-  
+  // const existingReview = await Review.findOne({
+  //   product: productId,
+  //   user: req.user.userId
+  // })
+  const existingReview = await Review.findById(reviewId)
   if (!existingReview) {
     throw new NotFoundError('No existing review found to update')
   }
-  
+  console.log("Existing Review"+existingReview)
   const session = await mongoose.startSession()
   session.startTransaction()
   
@@ -272,13 +274,14 @@ const updateReview = async (req, res) => {
     const updatedReview = await existingReview.save({ session })
     
     // Calculate new average rating
-    const allReviews = await Review.find({ product: productId }, null, { session })
+    const allReviews = await Review.find({ product: existingReview.product }, null, { session })
     const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0)
     const averageRating = totalRating / allReviews.length
     
     // Update product with new average rating
     await Product.findByIdAndUpdate(
-      productId,
+      // productId,
+      existingReview.product,
       { averageRating },
       { session }
     )

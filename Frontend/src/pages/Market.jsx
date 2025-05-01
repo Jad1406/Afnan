@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+
 import axios from 'axios';
 
 import './Market.css';
@@ -18,15 +19,23 @@ const Market = () => {
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [minRatingFilter, setMinRatingFilter] = useState(0);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 100]);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(1000);
+  const [isEditingMinPrice, setIsEditingMinPrice] = useState(false);
+  const [isEditingMaxPrice, setIsEditingMaxPrice] = useState(false);
+  const [minPriceInput, setMinPriceInput] = useState("0");
+  const [maxPriceInput, setMaxPriceInput] = useState("1000");  const [searchQuery, setSearchQuery] = useState('');
+
   const [sortBy, setSortBy] = useState('featured');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: '',
@@ -42,7 +51,7 @@ const Market = () => {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   // Get cart context
-  const { addToCart } = useCart();
+  const Cart = useCart();
   
   // Get wishlist context
   const { toggleWishlistItem, isInWishlist } = useWishlist();
@@ -68,7 +77,7 @@ const Market = () => {
         if(!productsData || productsData.length === 0) {
           console.error('No products found in the response');
         } else {
-          console.log('Fetched products:', productsData);
+          // console.log('Fetched products:', productsData);
         }
         setProducts(productsData);
         setFilteredProducts(productsData);
@@ -93,14 +102,16 @@ const Market = () => {
       setIsAddProductOpen(true);
     });
     
-    registerCallback('addProductToCart', (product) => {
-      addToCart(product);
+    registerCallback('addProductToCart', (product, quantity = 1) => {
+      Cart.addToCart(product, quantity);
     });
     
     registerCallback('openProductQuickView', (product) => {
       setQuickViewProduct(product);
       setIsQuickViewOpen(true);
     });
+
+
   }, [products]);
   
   // Filter products when filters change
@@ -114,7 +125,7 @@ const Market = () => {
     
     // Filter by price range
     result = result.filter(product => 
-      product.price >= priceRange[0] && product.price <= priceRange[1]
+      product.price >= minPrice && product.price <= maxPrice
     );
     
     // Filter by search query
@@ -124,6 +135,12 @@ const Market = () => {
         product.name.toLowerCase().includes(query) || 
         product.description.toLowerCase().includes(query)
       );
+    }
+
+    // Apply rating filter if active
+
+    if (minRatingFilter > 0) {
+      result = result.filter(p => (p.averageRating || 0) >= minRatingFilter);
     }
     
     // Sort products
@@ -144,7 +161,7 @@ const Market = () => {
     }
     
     setFilteredProducts(result);
-  }, [activeCategory, priceRange, searchQuery, sortBy, products]);
+  }, [activeCategory, minPrice, maxPrice, searchQuery, sortBy, products, minRatingFilter]);
   
   // Handle wishlist toggle with authentication
   const handleWishlistToggle = (productId) => {
@@ -162,25 +179,26 @@ const Market = () => {
     }
   };
   
-  // Handle adding product to cart
-  const handleAddToCart = (product, event) => {
-    if (event) {
-      event.stopPropagation();
-    }
+// Handle adding product to cart
+const handleAddToCart = (product, event, quantity = 1) => {
+  if (event) {
+    event.stopPropagation();
+  }
+  
+  // Use the updated Cart.addToCart function with quantity
+  Cart.addToCart(product, quantity);
+  
+  // Optional: Give user feedback that item was added
+  if (event && event.target) {
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = `Added ${quantity}!`;
     
-    addToCart(product);
-    
-    // Optional: Give user feedback that item was added
-    if (event && event.target) {
-      const button = event.target;
-      const originalText = button.textContent;
-      button.textContent = 'Added!';
-      
-      setTimeout(() => {
-        button.textContent = originalText;
-      }, 1500);
-    }
-  };
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 1500);
+  }
+};
 
   // Handle quick view with authentication check if needed
   const handleQuickView = (product, event) => {
@@ -208,27 +226,81 @@ const Market = () => {
   };
   
   // Handle product updates (after rating changes)
-  const handleProductUpdate = (updatedProduct) => {
-    // First, update the product in the products array
-    const updatedProducts = products.map(product => 
-      (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
-    );
+  // const handleProductUpdate = (updatedProduct) => {
+  //   // First, update the product in the products array
+  //   const updatedProducts = products.map(product => 
+  //     (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
+  //   );
     
-    setProducts(updatedProducts);
+  //   setProducts(updatedProducts);
 
-    // Also update the filtered products to ensure the UI reflects the change
-    setFilteredProducts(prevFiltered => {
-      return prevFiltered.map(product => 
-        (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
-      );
-    });
+  //   // Also update the filtered products to ensure the UI reflects the change
+  //   setFilteredProducts(prevFiltered => {
+  //     return prevFiltered.map(product => 
+  //       (product.id === updatedProduct.id || product._id === updatedProduct._id) ? updatedProduct : product
+  //     );
+  //   });
     
-    // Update quickViewProduct if it's the one being rated
-    if (quickViewProduct && (quickViewProduct.id === updatedProduct.id || quickViewProduct._id === updatedProduct._id)) {
-      setQuickViewProduct(updatedProduct);
-    }
-  };
+  //   // Update quickViewProduct if it's the one being rated
+  //   if (quickViewProduct && (quickViewProduct.id === updatedProduct.id || quickViewProduct._id === updatedProduct._id)) {
+  //     setQuickViewProduct(updatedProduct);
+  //   }
+  // };
+  // 2. Replace your handleProductUpdate function with this improved version
+const handleProductUpdate = (updatedProduct) => {
+  // Get the ID of the updated product
+  const updatedProductId = updatedProduct._id;
   
+  if (!updatedProductId) {
+    console.error("Updated product has no ID:", updatedProduct);
+    return;
+  }
+  
+
+  
+  // Update the products array with strict ID matching
+  const updatedProducts = products.map(product => {
+    const productId = product._id;
+    
+    // Only update the matching product
+    if (productId && productId === updatedProductId) {
+      // console.log("Found matching product to update:", productId);
+      return { ...product, ...updatedProduct };
+    }
+    
+    // Keep all other products unchanged
+    return product;
+  });
+  
+
+  
+  // Set the main products state
+  setProducts(updatedProducts);
+  
+  // Update filtered products separately with the same strict matching
+  setFilteredProducts(prevFiltered => {
+    return prevFiltered.map(product => {
+      const productId = product._id;
+      
+      if (productId && productId === updatedProductId) {
+        return { ...product, ...updatedProduct };
+      }
+      
+      return product;
+    });
+  });
+  
+  // Update quickViewProduct if it's the one being rated
+  if (quickViewProduct) {
+    const quickViewId = quickViewProduct._id;
+    
+    if (quickViewId && quickViewId === updatedProductId) {
+      setQuickViewProduct({ ...quickViewProduct, ...updatedProduct });
+    }
+  }
+};
+
+
   // Handle image error
   const handleImageError = (e) => {
     e.target.onerror = null; // Prevent infinite error loop
@@ -247,6 +319,72 @@ const Market = () => {
       setIsAddProductOpen(true);
     }
   };
+  
+
+
+    //  Handler functions for price editing
+        const handleMinPriceClick = () => {
+          setMinPriceInput(minPrice.toString());
+          setIsEditingMinPrice(true);
+        };
+
+        const handleMaxPriceClick = () => {
+          setMaxPriceInput(maxPrice.toString());
+          setIsEditingMaxPrice(true);
+        };
+
+        const handleMinPriceChange = (e) => {
+          setMinPriceInput(e.target.value);
+        };
+
+        const handleMaxPriceChange = (e) => {
+          setMaxPriceInput(e.target.value);
+        };
+
+        const handleMinPriceBlur = () => {
+          let value = parseInt(minPriceInput);
+          
+          // Validate input
+          if (isNaN(value) || value < 0) {
+            value = 0;
+          } else if (value > maxPrice) {
+            value = maxPrice;
+          }
+          
+          setMinPrice(value);
+          setMinPriceInput(value.toString());
+          setIsEditingMinPrice(false);
+        };
+
+        const handleMaxPriceBlur = () => {
+          let value = parseInt(maxPriceInput);
+          
+          // Validate input
+          if (isNaN(value) || value < minPrice) {
+            value = minPrice;
+          }
+          
+          setMaxPrice(value);
+          setMaxPriceInput(value.toString());
+          setIsEditingMaxPrice(false);
+        };
+
+        const handleMinPriceKeyDown = (e) => {
+          if (e.key === 'Enter') {
+            handleMinPriceBlur();
+          }
+        };
+
+        const handleMaxPriceKeyDown = (e) => {
+          if (e.key === 'Enter') {
+            handleMaxPriceBlur();
+          }
+        };
+
+
+
+
+
   
   // Check if user is authenticated and fetch categories on mount
   useEffect(() => {
@@ -523,65 +661,156 @@ const Market = () => {
               </ul>
             </div>
             
-            <div className="filter-section">
-              <h3>Price Range</h3>
-              <div className="price-range-control">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={priceRange[1]} 
-                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                  className="price-slider"
-                />
-                <div className="price-inputs">
-                  <div>
-                    <span className="price-label">Min:</span>
-                    <span className="price-value">${priceRange[0]}</span>
-                  </div>
-                  <div>
-                    <span className="price-label">Max:</span>
-                    <span className="price-value">${priceRange[1]}</span>
-                  </div>
-                </div>
-              </div>
+        <div className="filter-section">
+          <h3>Price Range</h3>
+          <div className="price-range-control">
+            <div className="price-sliders">
+              <input 
+                type="range" 
+                min="0" 
+                max="1000" 
+                value={minPrice} 
+                onChange={(e) => {
+                  const newMin = parseInt(e.target.value);
+                  if (newMin <= maxPrice) {
+                    setMinPrice(newMin);
+                  }
+                }}
+                className="price-slider min-slider"
+                style={{
+                  width: '100%',
+                  marginBottom: '5px'
+                }}
+              />
+              <input 
+                type="range" 
+                min="0" 
+                max="1000" 
+                value={maxPrice} 
+                onChange={(e) => {
+                  const newMax = parseInt(e.target.value);
+                  if (newMax >= minPrice) {
+                    setMaxPrice(newMax);
+                  }
+                }}
+                className="price-slider max-slider"
+                style={{
+                  width: '100%',
+                  marginBottom: '15px'
+                }}
+              />
             </div>
             
-            <div className="filter-section">
-             <h3>Rating</h3>
-              <div className="rating-filter">
-                <label className="rating-option">
-                  <input 
-                    type="checkbox" 
-                    onChange={(e) => {
-                      // Filter products with rating >= 4
-                      if (e.target.checked) {
-                        setFilteredProducts(products.filter(p => p.averageRating >= 4));
-                      } else {
-                        // Reset filter
-                        setFilteredProducts(products);
-                      }
+            <div className="price-inputs" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="min-price-container">
+                <span className="price-label">Min: $</span>
+                {isEditingMinPrice ? (
+                  <input
+                    type="text"
+                    value={minPriceInput}
+                    onChange={handleMinPriceChange}
+                    onBlur={handleMinPriceBlur}
+                    onKeyDown={handleMinPriceKeyDown}
+                    autoFocus
+                    style={{
+                      width: '50px',
+                      padding: '2px 5px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px'
                     }}
-                  /> 
-                  4★ & above
-                </label>
-                <label className="rating-option">
-                  <input 
-                    type="checkbox"
-                    onChange={(e) => {
-                      // Filter products with rating >= 3
-                      if (e.target.checked) {
-                        setFilteredProducts(products.filter(p => p.averageRating >= 3));
-                      } else {
-                        // Reset filter
-                        setFilteredProducts(products);
-                      }
+                  />
+                ) : (
+                  <span 
+                    className="price-value clickable" 
+                    onClick={handleMinPriceClick}
+                    style={{ 
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      color: '#4CAF50'
                     }}
-                  /> 
-                  3★ & above
-                </label>
+                  >
+                    {minPrice}
+                  </span>
+                )}
+              </div>
+              
+              <div className="max-price-container">
+                <span className="price-label">Max: $</span>
+                {isEditingMaxPrice ? (
+                  <input
+                    type="text"
+                    value={maxPriceInput}
+                    onChange={handleMaxPriceChange}
+                    onBlur={handleMaxPriceBlur}
+                    onKeyDown={handleMaxPriceKeyDown}
+                    autoFocus
+                    style={{
+                      width: '50px',
+                      padding: '2px 5px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px'
+                    }}
+                  />
+                ) : (
+                  <span 
+                    className="price-value clickable" 
+                    onClick={handleMaxPriceClick}
+                    style={{ 
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      color: '#4CAF50'
+                    }}
+                  >
+                    {maxPrice}
+                  </span>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+            
+      <div className="filter-section">
+        <h3>Rating</h3>
+        <div className="rating-filter">
+          <div className="rating-slider-container">
+            <input
+        type="range"
+        min="0"
+        max="5"
+        step="0.5"
+        value={minRatingFilter}
+        onChange={(e) => setMinRatingFilter(parseFloat(e.target.value))}
+        className="rating-slider"
+        style={{
+          width: '100%',
+          marginBottom: '10px'
+        }}
+      />
+      <div className="rating-slider-labels" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>Any</span>
+        <span>5★</span>
+      </div>
+      <div className="current-rating-filter" style={{ 
+        textAlign: 'center', 
+        marginTop: '5px',
+        fontWeight: minRatingFilter > 0 ? 'bold' : 'normal',
+        color: minRatingFilter > 0 ? '#4CAF50' : '#666'
+      }}>
+        {minRatingFilter === 0 ? 'All Ratings' : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span>Min Rating: </span>
+            <span style={{ color: '#FFD700', marginLeft: '5px' }}>
+              {'★'.repeat(Math.floor(minRatingFilter))}
+              {minRatingFilter % 1 === 0.5 ? '½' : ''}
+              {'☆'.repeat(5 - Math.ceil(minRatingFilter))}
+            </span>
+            <span style={{ marginLeft: '5px' }}>({minRatingFilter})</span>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
             
             <div className="filter-section">
               <h3>Availability</h3>
@@ -608,8 +837,10 @@ const Market = () => {
               className="reset-filters-btn"
               onClick={() => {
                 setActiveCategory('all');
-                setPriceRange([0, 100]);
+                setMinPrice(0);
+                setMaxPrice(1000);
                 setSearchQuery('');
+                setMinRatingFilter(0);
                 setFilteredProducts(products);
               }}
             >
@@ -714,15 +945,18 @@ const Market = () => {
               <div className="no-results">
                 <p>No products found matching your filters.</p>
                 <button 
-                  className="reset-btn"
-                  onClick={() => {
-                    setActiveCategory('all');
-                    setPriceRange([0, 100]);
-                    setSearchQuery('');
-                  }}
-                >
-                  Reset Filters
-                </button>
+              className="reset-filters-btn"
+              onClick={() => {
+                setActiveCategory('all');
+                setMinPrice(0);
+                setMaxPrice(1000);
+                setSearchQuery('');
+                setMinRatingFilter(0);
+                setFilteredProducts(products);
+              }}
+            >
+              Reset Filters
+            </button>
               </div>
             )}
           </main>

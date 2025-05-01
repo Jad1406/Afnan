@@ -327,7 +327,7 @@ const Login = () => {
         
         // Store token and user data in localStorage
         localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        // localStorage.setItem('user', JSON.stringify(user));
         
         // Redirect to the appropriate page
         handleSuccessfulLogin();

@@ -22,6 +22,13 @@ import Market from './pages/Market';
 import Tracker from './pages/Tracker';
 import AI from './pages/AiChat';
 
+import Profile from './pages/Profile';
+import Checkout from './pages/Checkout';
+import OrderSuccess from './pages/OrderSuccess';
+import OrderHistory from './components/OrderHistory/OrderHistory';
+
+
+
 // Protected route component using the useAuth hook
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -101,6 +108,11 @@ function App() {
                 <Route path="/community" element={<Community />} />
                 <Route path="/education" element={<Education />} />
                 <Route path="/market" element={<Market />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+                <Route path="/orders" element={<OrderHistory />} />
+
                 
                 {/* Protected routes */}
                 <Route path="/tracker" element={

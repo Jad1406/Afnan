@@ -1,6 +1,11 @@
+
+
+
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import {jwtDecode} from 'jwt-decode'; // Add this package: npm install jwt-decode
 
 // Create context
 const AuthContext = createContext();
@@ -10,12 +15,28 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userInfo, setUserInfo] = useState(null);
+  const [user, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pendingAction, setPendingAction] = useState(null);
   
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Function to extract user info from JWT token
+  const getUserFromToken = (token) => {
+    try {
+      const user = jwtDecode(token);
+      console.log('Decoded user info:', user);
+      // Extract relevant user data from token
+      // Adjust these fields based on what your JWT token contains
+      return {
+        user
+      };
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  };
 
   // Check authentication status on mount
   useEffect(() => {
@@ -24,34 +45,45 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         
         if (token) {
-          // Verify token with backend
-          const response = await axios.get(`${API_BASE_URL}/api/v1/auth/verify`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          if (response.status === 200) {
-            setIsAuthenticated(true);
-            setUserInfo(localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null);
+          try {
+            // Get user info directly from the token
+            const userInfo = getUserFromToken(token);
             
-            // Check if there's a pending action to complete
-            const savedAction = localStorage.getItem('pendingAction');
-            if (savedAction) {
-              const action = JSON.parse(savedAction);
-              setPendingAction(action);
-              localStorage.removeItem('pendingAction');
-              
-              // Execute the pending action if it exists
-              if (action.type === 'REDIRECT') {
-                navigate(action.payload.path);
-              } else if (action.type === 'CALLBACK' && window[action.payload.callbackName]) {
-                window[action.payload.callbackName](...action.payload.args);
+            // Optionally verify token validity with backend
+            const response = await axios.get(`${API_BASE_URL}/api/v1/auth/verify`, {
+              headers: {
+                Authorization: `Bearer ${token}`
               }
+            });
+            
+            if (response.status === 200) {
+              setIsAuthenticated(true);
+              setUserInfo(userInfo);
+              
+              // Check for pending actions
+              const savedAction = localStorage.getItem('pendingAction');
+              if (savedAction) {
+                const action = JSON.parse(savedAction);
+                setPendingAction(action);
+                localStorage.removeItem('pendingAction');
+                
+                // Execute the pending action if it exists
+                if (action.type === 'REDIRECT') {
+                  navigate(action.payload.path);
+                } else if (action.type === 'CALLBACK' && window[action.payload.callbackName]) {
+                  window[action.payload.callbackName](...action.payload.args);
+                }
+              }
+            } else {
+              handleLogout();
             }
-          } else {
+          } catch (error) {
+            console.error('Token verification error:', error);
             handleLogout();
           }
+        } else {
+          setIsAuthenticated(false);
+          setUserInfo(null);
         }
       } catch (error) {
         console.error('Error verifying authentication:', error);
@@ -72,14 +104,16 @@ export const AuthProvider = ({ children }) => {
         password
       });
       
-      const { token, user } = response.data;
+      const { token } = response.data;
       
-      // Store token and user data
+      // Only store the token, not the user data
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Extract user info directly from token
+      const userInfo = getUserFromToken(token);
       
       setIsAuthenticated(true);
-      setUserInfo(user);
+      setUserInfo(userInfo);
       
       return { success: true };
     } catch (error) {
@@ -94,7 +128,6 @@ export const AuthProvider = ({ children }) => {
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     localStorage.removeItem('pendingAction');
     setIsAuthenticated(false);
     setUserInfo(null);
@@ -127,13 +160,14 @@ export const AuthProvider = ({ children }) => {
   // Value object to be provided to consumers
   const authContextValue = {
     isAuthenticated,
-    userInfo,
+    user,
     loading,
     pendingAction,
     login,
     logout: handleLogout,
     requireAuth,
     registerCallback,
+    getUserFromToken
   };
 
   return (
@@ -152,4 +186,4 @@ export const useAuth = () => {
   return context;
 };
 
-export default AuthContext; 
+export default AuthContext;

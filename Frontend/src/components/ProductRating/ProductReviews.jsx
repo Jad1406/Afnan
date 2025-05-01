@@ -176,177 +176,264 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../../components/Auth/AuthContext';
-import './ProductReviews.css';
+import { useAuth } from '../Auth/AuthContext';
+import ClipLoader from 'react-spinners/ClipLoader';
 
+// Consistent API base URL
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
-const ProductReviews = ({ productId, newReview, onDeleteRating }) => {
+const ProductReviews = ({ productId, refreshFlag, onReviewAction }) => {
   const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   
-  // Use the Auth context
-  const { isAuthenticated, user, requireAuth } = useAuth();
+  const { user } = useAuth();
   
-  // Fetch reviews when component mounts or when productId changes
-  useEffect(() => {
-    if (productId) {
-      fetchReviews();
-    }
-  }, [productId]);
-  
-  // Refetch reviews when a new review is submitted or deleted
-  useEffect(() => {
-    if (newReview) {
-      console.log("New review detected, refreshing reviews list:", newReview);
-      fetchReviews();
-    }
-  }, [newReview]);
-  
-  const fetchReviews = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/reviews/product/${productId}`);
-      
-      if (response.data && Array.isArray(response.data.reviews)) {
-        console.log("Fetched reviews:", response.data.reviews);
-        
-        // Ensure each review has a unique identifier for the key prop
-        const reviewsWithUniqueKeys = response.data.reviews.map(review => ({
-          ...review,
-          // If _id doesn't exist, generate a unique key
-          uniqueKey: review._id || review.id || `review-${Math.random().toString(36).substr(2, 9)}`
-        }));
-        
-        setReviews(reviewsWithUniqueKeys);
-      } else {
-        setReviews([]);
-      }
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      setError('Failed to load reviews. Please try again later.');
-      setReviews([]);
-    } finally {
-      setLoading(false);
-    }
+  // Get the current user ID
+  const getCurrentUserId = () => {
+    if (!user) return null;
+    return user.id || user._id || user.userId;
   };
   
-  const handleDeleteClick = (reviewId) => {
-    // Check if user is authenticated
-    if (!requireAuth({
-      type: 'CALLBACK',
-      payload: {
-        callbackName: 'deleteProductReview',
-        args: [reviewId]
+  // Fetch reviews when component mounts or refreshFlag changes
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!productId) return;
+      
+      setIsLoading(true);
+      setError('');
+      
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/v1/reviews/product/${productId}`);
+        
+        // Sort reviews - user's review first, then by date descending
+        const reviewData = response.data.reviews || [];
+        const userId = getCurrentUserId();
+        
+        reviewData.sort((a, b) => {
+          // If one is the user's review, it comes first
+          const aUserId = a.user?._id || a.user?.id || a.userId || a.user;
+          const bUserId = b.user?._id || b.user?.id || b.userId || b.user;
+          
+          if (aUserId === userId && bUserId !== userId) return -1;
+          if (aUserId !== userId && bUserId === userId) return 1;
+          
+          // Otherwise sort by date, newest first
+          const aDate = new Date(a.createdAt || a.updatedAt || 0);
+          const bDate = new Date(b.createdAt || b.updatedAt || 0);
+          return bDate - aDate;
+        });
+        
+        setReviews(reviewData);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        setError('Unable to load reviews. Please try again later.');
+      } finally {
+        setIsLoading(false);
       }
-    })) {
+    };
+    
+    fetchReviews();
+  }, [productId, refreshFlag]);
+  
+  const handleEditReview = (review) => {
+    // Trigger edit mode in ProductRating component
+    const event = new CustomEvent('editReview', { detail: review });
+    document.dispatchEvent(event);
+  };
+  
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) {
       return;
     }
     
-    if (window.confirm('Are you sure you want to delete this review?')) {
-      onDeleteRating(reviewId);
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+      
+      await axios.delete(
+        `${API_BASE_URL}/api/v1/reviews/${reviewId}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      // Remove the review from the list
+      const deletedReview = reviews.find(r => r._id === reviewId);
+      setReviews(reviews.filter(r => r._id !== reviewId));
+      
+      if (deletedReview && onReviewAction) {
+        // Calculate updated product stats
+        const reviewRating = deletedReview.rating || 0;
+        const numReviews = reviews.length;
+        
+        if (numReviews > 1) {
+          // Calculate new average without this review
+          const totalRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+          const newTotalRating = totalRating - reviewRating;
+          const newAverage = newTotalRating / (numReviews - 1);
+          
+          onReviewAction({
+            numRatings: numReviews - 1,
+            averageRating: newAverage
+          }, 'delete');
+        } else {
+          // This was the only review
+          onReviewAction({
+            numRatings: 0,
+            averageRating: 0
+          }, 'delete');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      setError('Failed to delete review. Please try again.');
     }
   };
   
-  const renderStars = (rating) => {
-    // Ensure rating is a valid number between 0 and 5
-    const safeRating = !isNaN(rating) ? Math.max(0, Math.min(5, rating)) : 0;
+  // Format date to be more readable
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
     
-    return (
-      <div className="review-stars">
-        {[...Array(5)].map((_, index) => {
-          const starValue = index + 1;
-          return (
-            <span 
-              key={index} 
-              className={`star ${safeRating >= starValue ? 'filled' : ''}`}
-            >
-              {safeRating >= starValue ? '★' : '☆'}
-            </span>
-          );
-        })}
-      </div>
-    );
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
   
   // Check if a review belongs to the current user
   const isUserReview = (review) => {
-    if (!isAuthenticated || !user) return false;
+    const userId = getCurrentUserId();
+    if (!userId) return false;
     
-    const userId = user.id || user._id;
-    
-    return (
-      review.userId === userId || 
-      (review.user && (review.user.id === userId || review.user._id === userId))
-    );
+    const reviewUserId = review.user?._id || review.user?.id || review.userId || review.user;
+    return userId === reviewUserId;
   };
   
-  if (loading) {
-    return <div className="reviews-loading">Loading reviews...</div>;
+  // Get username from review
+  const getReviewerName = (review) => {
+    // Try to get user's name from different possible structures
+    if (review.user?.name) return review.user.name;
+    if (review.user?.firstName) {
+      return review.user.lastName ? 
+        `${review.user.firstName} ${review.user.lastName}` : 
+        review.user.firstName;
+    }
+    if (review.username) return review.username;
+    
+    // Use email with domain hidden for privacy
+    if (review.user?.email) {
+      const email = review.user.email;
+      const atIndex = email.indexOf('@');
+      if (atIndex > 0) {
+        return `${email.substring(0, atIndex)}@***`;
+      }
+      return email;
+    }
+    
+    return 'Anonymous User';
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="reviews-loading" style={{ textAlign: 'center', padding: '20px' }}>
+        <ClipLoader color="#4CAF50" size={30} />
+        <p>Loading reviews...</p>
+      </div>
+    );
   }
   
   if (error) {
-    return <div className="reviews-error">{error}</div>;
+    return (
+      <div className="reviews-error" style={{ color: 'red', padding: '10px', textAlign: 'center' }}>
+        {error}
+      </div>
+    );
   }
   
   if (reviews.length === 0) {
     return (
-      <div className="no-reviews">
-        <p>No reviews yet. Be the first to review this product!</p>
+      <div className="no-reviews" style={{ textAlign: 'center', padding: '20px' }}>
+        <p>No reviews yet. Be the first to leave a review!</p>
       </div>
     );
   }
   
   return (
     <div className="product-reviews">
-      <h3>Customer Reviews</h3>
-      <div className="reviews-list">
-        {reviews.map((review) => {
-          // Check if this review belongs to the current user
-          const belongsToUser = isUserReview(review);
-          
-          // Use the uniqueKey property we added, or fallback to other IDs
-          const reviewKey = review.uniqueKey || review._id || review.id || `review-${Math.random().toString(36).substr(2, 9)}`;
-          
-          return (
-            <div key={reviewKey} className={`review-item ${belongsToUser ? 'user-review' : ''}`}>
-              <div className="review-header">
-                <div className="reviewer-info">
-                  <span className="reviewer-name">
-                    {review.user ? review.user.name || 'Anonymous' : 'Anonymous'}
-                    {belongsToUser ? ' (You)' : ''}
-                  </span>
-                  <span className="review-date">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="review-rating">
-                  {renderStars(review.rating)}
-                </div>
-                
-                {belongsToUser && isAuthenticated && onDeleteRating && (
-                  <div className="review-actions">
-                    <button 
-                      className="delete-review-btn"
-                      onClick={() => handleDeleteClick(review._id || review.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {review.comment && (
-                <div className="review-comment">
-                  <p>{review.comment}</p>
-                </div>
-              )}
+      {reviews.map(review => (
+        <div 
+          key={review._id} 
+          className={`review-item ${isUserReview(review) ? 'user-review' : ''}`}
+          style={{
+            border: '1px solid #eee',
+            borderRadius: '8px',
+            padding: '15px',
+            marginBottom: '15px',
+            backgroundColor: isUserReview(review) ? '#f8fffa' : '#fff'
+          }}
+        >
+          <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div className="reviewer-info">
+              <strong>{getReviewerName(review)}</strong>
+              {isUserReview(review) && <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px' }}>(Your Review)</span>}
             </div>
-          );
-        })}
-      </div>
+            <div className="review-date">
+              {formatDate(review.createdAt || review.updatedAt)}
+            </div>
+          </div>
+          
+          <div className="review-rating" style={{ marginBottom: '8px' }}>
+            <span style={{ color: '#FFD700', fontSize: '18px' }}>
+              {'★'.repeat(review.rating)}
+              {'☆'.repeat(5 - review.rating)}
+            </span>
+          </div>
+          
+          {review.comment && (
+            <div className="review-comment" style={{ marginBottom: '10px' }}>
+              <p>{review.comment}</p>
+            </div>
+          )}
+          
+          {isUserReview(review) && (
+            <div className="review-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              {/* <button
+                onClick={() => handleEditReview(review)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  textDecoration: 'underline',
+                  color: '#4CAF50',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDeleteReview(review._id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  textDecoration: 'underline',
+                  color: '#ff4d4d',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Delete
+              </button> */}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
