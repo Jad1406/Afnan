@@ -271,14 +271,19 @@ export const CartProvider = ({ children }) => {
         );
         
         // Update cart with server response
-        setCart(response.data.cart);
+            // Only update cart state if server responds with success
+    if (response.status === 200 || response.status === 201) {
+      setCart(response.data.cart);
+    } else {
+      setError("Unexpected response when adding to cart:", response);
+    }
         
       } catch (err) {
         console.error('Error adding item to cart:', err);
         setError('Failed to add item to cart');
         
         // Fall back to local update if API fails
-        updateLocalCart(product, productId, safeQuantity);
+        // updateLocalCart(product, productId, safeQuantity);
       } finally {
         setIsLoading(false);
       }
@@ -369,12 +374,12 @@ export const CartProvider = ({ children }) => {
   
   // Update cart item quantity
   const updateCartQuantity = async (productId, newQuantity) => {
-    console.log("What is the issue?????", productId, newQuantity);
+    // console.log("What is the issue?????", productId, newQuantity);
     if (!productId) return;
     
     // Ensure quantity is a positive integer
     const safeQuantity = Math.max(1, parseInt(newQuantity) || 1);
-    console.log(`Updating product ${productId} quantity to ${safeQuantity}`);
+
     if (isAuthenticated) {
       // For authenticated users, use the API
       try {
@@ -392,7 +397,6 @@ export const CartProvider = ({ children }) => {
             }
           }
         );
-        console.log('API response:', response.data);
         // Update cart with server response
         setCart(response.data.cart);
         
@@ -422,40 +426,83 @@ export const CartProvider = ({ children }) => {
   };
   
   // Clear the entire cart
-  const clearCart = async () => {
-    if (isAuthenticated) {
-      // For authenticated users, use the API
-      try {
-        setIsLoading(true);
-        
-        const token = localStorage.getItem('token');
-        
-        const response = await axios.delete(
-          `${API_BASE_URL}/api/v1/cart/clear`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        );
-        
-        // Empty the cart
-        setCart([]);
-        
-      } catch (err) {
-        console.error('Error clearing cart:', err);
-        setError('Failed to clear cart');
-        
-        // Fall back to local clear if API fails
-        setCart([]);
-      } finally {
-        setIsLoading(false);
+
+// Update the clearCart function for better error handling and logging
+const clearCart = async () => {
+  if (isAuthenticated) {
+    // For authenticated users, use the API
+    try {
+      setIsLoading(true);
+      setError(null); // Clear any previous errors
+      
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
       }
-    } else {
-      // For non-authenticated users, simply clear local cart
+      
+      console.log('Clearing cart: making API request...');
+      
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/v1/cart/clear`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('Cart clear API response:', response.status, response.data);
+      
+      // Check if response indicates success
+      if (response.status !== 200 && response.status !== 204) {
+        throw new Error(`Server returned ${response.status}: ${JSON.stringify(response.data)}`);
+      }
+      
+      // Empty the cart in state
+      console.log('Setting cart to empty array in state');
       setCart([]);
+      
+      return true;
+      
+    } catch (err) {
+      console.error('Error clearing cart:', err);
+      setError('Failed to clear cart: ' + (err.message || 'Unknown error'));
+      
+      // Don't automatically fall back to clearing the cart state
+      // This helps diagnose the issue better
+      // Only clear local state if it's a 404 (cart not found) or similar
+      if (err.response && (err.response.status === 404 || err.response.status === 400)) {
+        console.log('Clearing client-side cart state due to 404/400 error');
+        setCart([]);
+      }
+      
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  } else {
+    // For non-authenticated users, simply clear local cart
+    console.log('User not authenticated, clearing local cart state');
+    setCart([]);
+    return Promise.resolve(true);
+  }
+};
+
+// Add a new function to force cart refresh from server
+const refreshCartFromServer = async () => {
+  if (!isAuthenticated) return;
+  
+  try {
+    console.log('Refreshing cart from server...');
+    await fetchUserCart(); // This will update the cart state with server data
+    return true;
+  } catch (err) {
+    console.error('Error refreshing cart from server:', err);
+    return false;
+  }
+};
+
   
   // Fetch user's cart history
   const fetchCartHistory = async (page = 1, limit = 10) => {
@@ -662,6 +709,7 @@ export const CartProvider = ({ children }) => {
     toggleCart,
     setIsCartOpen,
     clearCart,
+    refreshCartFromServer,
     
     // History and order actions
     fetchCartHistory,

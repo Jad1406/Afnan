@@ -8,6 +8,7 @@ import PlantChatbot from './components/PlantChatbot/PlantChatbot';
 import { CartProvider } from './CartContext';
 import { WishlistProvider } from './WishlistContext';
 import { AuthProvider, useAuth } from './components/Auth/AuthContext';
+
 import CartSidebar from './CartSidebar';
 import WishlistSidebar from './WishlistSidebar';
 import Login from './components/Auth/Login';
