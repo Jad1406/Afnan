@@ -10,7 +10,6 @@ import ForumList from '../components/ListofPosts/ForumList';
 import BlogList from '../components/ListofPosts/BlogList';
 import GalleryList from '../components/ListofPosts/GalleryList';
 import NewForumPostForm from '../components/ListofPosts/NewForumPostForm';
-import TestDataGenerator from '../utils/TestDataGenerator'; // Import the test data generator
 // Constants
 const API_BASE_URL = 'http://localhost:3000'; // Replace with your actual base URL
 
@@ -230,19 +229,7 @@ const getRelativeTime = (dateInput) => {
   ///// API Fetching Functions:
   
   // Check if user is authenticated before performing interactions
-  // UPDATED: Now uses the AuthContext requireAuth function
-  const checkAuthAndProceed = (action) => {
-    // Use the requireAuth function from AuthContext
-    const isAuthorized = requireAuth({
-      type: 'REDIRECT',
-      payload: { path: location.pathname }
-    });
-    
-    if (isAuthenticated && isAuthorized) {
-      // User is logged in, proceed with the action
-      action();
-    }
-  };
+
 
   // Fetch forum posts
 
@@ -297,14 +284,7 @@ const getRelativeTime = (dateInput) => {
   
   // Update the transformForumData function to properly handle comments and replies
   const transformForumData = (apiData) => {
-    // Debug: Log first post to check date structure
-    if (apiData.posts && apiData.posts.length > 0) {
-      console.log('First post date info:', {
-        createdAt: apiData.posts[0].createdAt,
-        type: typeof apiData.posts[0].createdAt,
-        isValid: apiData.posts[0].createdAt ? !isNaN(new Date(apiData.posts[0].createdAt).getTime()) : false
-      });
-    }
+ 
     
     return apiData.posts.map(post => {
       // Try to create a valid date string
@@ -486,7 +466,7 @@ const likePost = async (postId) => {
 
 // Update the likeComment function to toggle like state
 const likeComment = async (commentId) => {
-  checkAuthAndProceed(async () => {
+  requireAuth(async () => {
     try {
       // We don't have a way to easily check if comment is already liked
       // So we'll just call the like endpoint

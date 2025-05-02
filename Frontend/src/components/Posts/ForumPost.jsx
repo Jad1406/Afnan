@@ -138,12 +138,7 @@ const ForumPost = ({
               'Unknown date')}
           </span>
 
-           {console.log(`Post created at: ${post}`)}
-          {console.log('Post date info:', { 
-            date: post.date, 
-            createdAt: post.createdAt, 
-            type: typeof post.createdAt 
-          })}
+
           <span className={`post-likes ${isLiked ? 'liked' : ''}`}>
             ❤️ {post.likes?.length || post.likes || 0}
           </span>

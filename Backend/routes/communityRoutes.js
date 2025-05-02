@@ -82,7 +82,7 @@ router.route('/comments/:id')
   .patch(authenticateUser, updateComment)
   .delete(authenticateUser, deleteComment);
 router.post('/comments/:id/like', authenticateUser, likeComment);
-router.delete('/comments/:id/like', authenticateUser, unlikeComment);
+router.post('/comments/:id/unlike', authenticateUser, unlikeComment);
 router.post('/comments/:id/reply', authenticateUser, replyToComment);
 
 
