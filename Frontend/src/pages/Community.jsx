@@ -10,7 +10,7 @@ import ForumList from '../components/ListofPosts/ForumList';
 import BlogList from '../components/ListofPosts/BlogList';
 import GalleryList from '../components/ListofPosts/GalleryList';
 import NewForumPostForm from '../components/ListofPosts/NewForumPostForm';
-
+import TestDataGenerator from '../utils/TestDataGenerator'; // Import the test data generator
 // Constants
 const API_BASE_URL = 'http://localhost:3000'; // Replace with your actual base URL
 
@@ -20,7 +20,7 @@ const Community = () => {
   const [activeTab, setActiveTab] = useState('forum');
   
   // Use the AuthContext instead of local auth state
-  const { isAuthenticated, requireAuth } = useAuth();
+  const { isAuthenticated,user, requireAuth } = useAuth();
   
   // Loading and error states
   const [isLoading, setIsLoading] = useState({
@@ -34,6 +34,10 @@ const Community = () => {
     blogs: null,
     gallery: null
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   
   const [selectedPostId, setSelectedPostId] = useState(null);
   
@@ -96,28 +100,68 @@ const Community = () => {
   //// API Transformation Functions:
 
   // Format relative date like "2 days ago"
-  const getRelativeTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-    } else if (diffDays < 365) {
-      const months = Math.floor(diffDays / 30);
-      return `${months} ${months === 1 ? 'month' : 'months'} ago`;
-    } else {
-      return date.toLocaleDateString();
+// Improved getRelativeTime function that handles different date formats
+const getRelativeTime = (dateInput) => {
+  if (!dateInput) return 'Unknown date';
+  
+  let date;
+  
+  // Try to parse the date if it's a string
+  if (typeof dateInput === 'string') {
+    try {
+      date = new Date(dateInput);
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateInput);
+        return 'Invalid date';
+      }
+    } catch (e) {
+      console.error('Error parsing date:', e);
+      return 'Invalid date';
     }
-  };
+  } else if (dateInput instanceof Date) {
+    // If it's already a Date object, use it directly
+    date = dateInput;
+  } else {
+    // If it's neither a string nor a Date, return unknown
+    console.warn('Unsupported date type:', typeof dateInput);
+    return 'Unknown date';
+  }
+  
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    // If same day, show hours
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    if (diffHours === 0) {
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      if (diffMinutes === 0) {
+        return 'Just now';
+      }
+      return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    }
+    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+  } else if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+  } else if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+  } else {
+    // For older dates, show the formatted date
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+};
 
   // Recursive function to flatten comment tree into a list for display
   const flattenCommentTree = (commentTree, depth = 0) => {
@@ -147,22 +191,8 @@ const Community = () => {
   };
 
   // Transform forum post data from API to match frontend structure
-  const transformForumData = (apiData) => {
-    return apiData.posts.map(post => ({
-      id: post._id,
-      title: post.title,
-      author: post.user.name,
-      date: getRelativeTime(post.createdAt),
-      content: post.content,
-      replies: [],
-      likes: post.likes.length,
-      tags: post.tags || [],
-      category: post.category,
-      isSolved: post.isSolved,
-      solutionComment: post.solutionComment,
-      commentIds: post.comments
-    }));
-  };
+// Update the transformForumData function to handle top-level comments:
+
 
   // Transform blog post data from API to match frontend structure
   const transformBlogData = (apiData) => {
@@ -215,73 +245,151 @@ const Community = () => {
   };
 
   // Fetch forum posts
-  const fetchForumPosts = async () => {
+
+  const fetchForumPosts = async (page = 1, append = false) => {
     try {
-      setIsLoading(prev => ({ ...prev, forum: true }));
-      const response = await axios.get(`${API_BASE_URL}/api/v1/community/forum`);
+      if (page === 1) {
+        setIsLoading(prev => ({ ...prev, forum: true }));
+      } else {
+        setIsFetchingMore(true);
+      }
+      
+      // Page size (posts per page)
+      const limit = 10;
+      
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/community/forum?page=${page}&limit=${limit}`,
+        { withCredentials: true }
+      );
+      
       const transformedData = transformForumData(response.data);
-      setForumPosts(transformedData);
+      
+      if (append) {
+        // Append new posts to existing ones
+        setForumPosts(prevPosts => [...prevPosts, ...transformedData]);
+      } else {
+        // Replace existing posts
+        setForumPosts(transformedData);
+      }
+      
+      // Update pagination state
+      setCurrentPage(page);
+      
+      // Check if there are more posts to load
+      setHasMorePosts(response.data.pagination?.hasNextPage || false);
+      
       setErrors(prev => ({ ...prev, forum: null }));
     } catch (error) {
       console.error('Error fetching forum posts:', error);
       setErrors(prev => ({ ...prev, forum: 'Failed to load forum posts' }));
     } finally {
       setIsLoading(prev => ({ ...prev, forum: false }));
+      setIsFetchingMore(false);
     }
   };
-
-  // Fetch a specific forum post with all details and comment tree
-  const fetchForumPost = async (postId) => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/community/forum/${postId}`);
-      const { post } = response.data; // Note the nested "post" object in the response
+  
+  // Add this function to load more posts (for infinite scrolling)
+  const loadMoreForumPosts = async () => {
+    if (hasMorePosts && !isFetchingMore) {
+      await fetchForumPosts(currentPage + 1, true);
+    }
+  };
+  
+  // Update the transformForumData function to properly handle comments and replies
+  const transformForumData = (apiData) => {
+    // Debug: Log first post to check date structure
+    if (apiData.posts && apiData.posts.length > 0) {
+      console.log('First post date info:', {
+        createdAt: apiData.posts[0].createdAt,
+        type: typeof apiData.posts[0].createdAt,
+        isValid: apiData.posts[0].createdAt ? !isNaN(new Date(apiData.posts[0].createdAt).getTime()) : false
+      });
+    }
+    
+    return apiData.posts.map(post => {
+      // Try to create a valid date string
+      let dateString = 'Unknown date';
+      if (post.createdAt) {
+        try {
+          const dateObj = new Date(post.createdAt);
+          if (!isNaN(dateObj.getTime())) {
+            dateString = getRelativeTime(dateObj);
+          } else {
+            console.warn('Invalid date in post:', post._id, post.createdAt);
+          }
+        } catch (e) {
+          console.error('Error parsing date:', e);
+        }
+      }
       
-      // Process and add comments to the post in state
-      let updatedPost = {
+      const transformedPost = {
         id: post._id,
         title: post.title,
-        author: post.user.name,
-        date: getRelativeTime(post.createdAt),
+        author: post.user?.name,
+        date: dateString, // Use our formatted date
+        createdAt: post.createdAt, // Also keep the original value
         content: post.content,
-        likes: post.likes.length,
+        replies: [],
+        likes: post.likes?.length || 0,
         tags: post.tags || [],
         category: post.category,
         isSolved: post.isSolved,
         solutionComment: post.solutionComment,
-        mediaUrl: post.mediaUrl,
-        mediaType: post.mediaType
+        commentCount: post.commentCount || 0
       };
       
-      // Use the commentTree from the response if available, otherwise use flat comments array
-      if (post.commentTree && Array.isArray(post.commentTree)) {
-        updatedPost.replies = flattenCommentTree(post.commentTree);
-      } else if (post.comments && Array.isArray(post.comments)) {
-        updatedPost.replies = post.comments.map(comment => ({
-          id: comment._id,
-          author: comment.user.name,
-          date: getRelativeTime(comment.createdAt),
-          content: comment.content,
-          likes: comment.likes?.length || 0,
-          depth: 0,
-          parentId: comment.parentComment
-        }));
-      } else {
-        updatedPost.replies = [];
+      // If topLevelComments are included, transform them
+      if (post.topLevelComments && post.topLevelComments.length > 0) {
+        transformedPost.replies = post.topLevelComments.map(comment => {
+          // Format comment dates too
+          let commentDateString = 'Unknown date';
+          if (comment.createdAt) {
+            try {
+              const commentDateObj = new Date(comment.createdAt);
+              if (!isNaN(commentDateObj.getTime())) {
+                commentDateString = getRelativeTime(commentDateObj);
+              }
+            } catch (e) {
+              console.error('Error parsing comment date:', e);
+            }
+          }
+          
+          return {
+            id: comment._id,
+            author: comment.user?.name,
+            content: comment.content,
+            date: commentDateString,
+            createdAt: comment.createdAt,
+            likes: comment.likes?.length || 0,
+            replyCount: comment.replyCount || (comment.replies?.length || 0),
+            depth: 0,
+            parentId: null
+          };
+        });
       }
       
-      // Update this single post in state
-      setForumPosts(prev => 
-        prev.map(p => p.id === postId ? updatedPost : p)
-      );
-      
-      setSelectedPostId(postId);
-      
-      return updatedPost;
-    } catch (error) {
-      console.error(`Error fetching forum post ${postId}:`, error);
-      throw error;
-    }
+      return transformedPost;
+    });
   };
+  
+// Update fetchForumPost to handle virtual replies
+const fetchForumPost = async (postId) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/community/forum/${postId}`);
+    
+    // Get the post data from the response
+    const { post } = response.data;
+    
+    // Return the post data with top-level comments
+    return {
+      ...post,
+      id: post._id // Ensure the ID is available as both _id and id
+    };
+  } catch (error) {
+    console.error(`Error fetching forum post ${postId}:`, error);
+    throw error;
+  }
+};
 
   // Fetch blog posts
   const fetchBlogPosts = async () => {
@@ -319,122 +427,140 @@ const Community = () => {
   ///// Interaction Functions:
 
   // Like a post with auth check
-  const likePost = async (postId) => {
-    checkAuthAndProceed(async () => {
-      try {
-        await axios.post(
-          `${API_BASE_URL}/api/v1/community/posts/${postId}/like`,
-          {},
-          { 
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            withCredentials: true
-          },
-        );
-        
-        // Update the like count in state
-        const updatePostLikes = (posts, setter) => {
-          const updatedPosts = posts.map(post => 
-            post.id === postId ? { ...post, likes: post.likes + 1 } : post
-          );
-          setter(updatedPosts);
-        };
-        
-        if (forumPosts.some(p => p.id === postId)) {
-          updatePostLikes(forumPosts, setForumPosts);
-        } else if (blogPosts.some(p => p.id === postId)) {
-          updatePostLikes(blogPosts, setBlogPosts);
-        } else if (galleryPosts.some(p => p.id === postId)) {
-          updatePostLikes(galleryPosts, setGalleryPosts);
-        }
-      } catch (error) {
-        console.error('Error liking post:', error);
-      }
-    });
-  };
-
-  // Like a comment with auth check
-  const likeComment = async (commentId) => {
-    checkAuthAndProceed(async () => {
-      try {
-        await axios.post(
-          `${API_BASE_URL}/api/v1/community/comments/${commentId}/like`,
-          {},
-          { 
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            withCredentials: true
-          },
-        );
-        
-        // Refresh the post to get updated likes on comments
-        if (selectedPostId) {
-          if (forumPosts.some(p => p.id === selectedPostId)) {
-            fetchForumPost(selectedPostId);
-          }
-        }
-      } catch (error) {
-        console.error('Error liking comment:', error);
-      }
-    });
-  };
-
-  // Add a comment to a post with auth check
-  const addCommentToPost = async (postId, commentContent, parentCommentId = null) => {
-    const result = checkAuthAndProceed(async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-          `${API_BASE_URL}/api/v1/community/posts/${postId}/comments`,
-          { 
-            content: commentContent,
-            parentComment: parentCommentId // Include parent comment ID for replies
-          },
-          { 
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            withCredentials: true
-          },
-        );
+// Update the likePost function to toggle like state
+const likePost = async (postId) => {
+  requireAuth(async () => {
+    try {
+      // Check if user has already liked the post
+      const post = forumPosts.find(p => p.id === postId || p._id === postId);
       
-        // After successfully adding comment, fetch the updated post with comments
-        if (response.status === 201 || response.status === 200) {
-          if (forumPosts.some(p => p.id === postId)) {
-            fetchForumPost(postId);
-          } else if (blogPosts.some(p => p.id === postId)) {
-            fetchBlogPosts();
-          } else if (galleryPosts.some(p => p.id === postId)) {
-            fetchGalleryPosts();
+      if (!post) return;
+      
+      const liked = post.likes && Array.isArray(post.likes) && post.likes.includes(user.userId);
+      
+      // Call either like or unlike endpoint
+      await axios.post(
+        `${API_BASE_URL}/api/v1/community/posts/${postId}/${liked ? 'unlike' : 'like'}`,
+        {},
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          withCredentials: true
+        },
+      );
+    
+      // Update the like count in state
+      const updatePostLikes = (posts, setter) => {
+        const updatedPosts = posts.map(post => {
+          if (post.id === postId || post._id === postId) {
+            // If already liked, decrease count (unlike), otherwise increase (like)
+            const newLikes = Array.isArray(post.likes) 
+              ? (liked 
+                ? post.likes.filter(id => id !== user.userId) 
+                : [...post.likes, user.userId])
+              : (liked ? post.likes - 1 : post.likes + 1);
+              
+            return { 
+              ...post, 
+              likes: newLikes
+            };
           }
-        }
-        
-        return response.data;
-      } catch (error) {
-        console.error('Error adding comment:', error);
-        throw error;
+          return post;
+        });
+        setter(updatedPosts);
+      };
+      
+      if (forumPosts.some(p => p.id === postId || p._id === postId)) {
+        updatePostLikes(forumPosts, setForumPosts);
+      } else if (blogPosts.some(p => p.id === postId || p._id === postId)) {
+        updatePostLikes(blogPosts, setBlogPosts);
+      } else if (galleryPosts.some(p => p.id === postId || p._id === postId)) {
+        updatePostLikes(galleryPosts, setGalleryPosts);
       }
-    });
-    
-    return result;
-  };
+    } catch (error) {
+      console.error('Error liking/unliking post:', error);
+    }
+  });
+};
 
-  // Reply to a comment with auth check
-  const replyToComment = async (postId, commentId, replyContent) => {
-    const result = checkAuthAndProceed(async () => {
-      try {
-        return await addCommentToPost(postId, replyContent, commentId);
-      } catch (error) {
-        console.error('Error replying to comment:', error);
-        throw error;
+// Update the likeComment function to toggle like state
+const likeComment = async (commentId) => {
+  checkAuthAndProceed(async () => {
+    try {
+      // We don't have a way to easily check if comment is already liked
+      // So we'll just call the like endpoint
+      await axios.post(
+        `${API_BASE_URL}/api/v1/community/comments/${commentId}/like`,
+        {},
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          withCredentials: true
+        },
+      );
+      
+      // Refresh the post to get updated likes on comments
+      if (selectedPostId) {
+        if (forumPosts.some(p => p.id === selectedPostId)) {
+          fetchForumPost(selectedPostId);
+        }
       }
-    });
+    } catch (error) {
+      console.error('Error liking comment:', error);
+    }
+  });
+};
+
+const addCommentToPost = async (postId, commentContent, parentCommentId = null) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Redirect to login if not authenticated
+      navigate('/login');
+      return null;
+    }
     
-    return result;
-  };
+    // Prepare request data
+    const requestData = { 
+      content: commentContent
+    };
     
+    // If this is a reply to another comment, add parentComment
+    if (parentCommentId) {
+      requestData.parentComment = parentCommentId;
+    }
+    
+    // Send the request
+    const response = await axios.post(
+      `${API_BASE_URL}/api/v1/community/posts/${postId}/comments`,
+      requestData,
+      { 
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        withCredentials: true
+      }
+    );
+    
+    // Return the created comment
+    return response.data;
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    throw error;
+  }
+};
+
+// Reply to a comment (wrapper around addCommentToPost)
+const replyToComment = async (postId, commentId, replyContent) => {
+  try {
+    return await addCommentToPost(postId, replyContent, commentId);
+  } catch (error) {
+    console.error('Error replying to comment:', error);
+    throw error;
+  }
+};
   // Fetch all data on component mount
   useEffect(() => {
     fetchForumPosts();
@@ -512,16 +638,17 @@ const Community = () => {
             </div>
             
             <ForumList 
-              isLoading={isLoading.forum}
-              errors={errors.forum}
-              forumPosts={forumPosts}
-              isAuthenticated={isAuthenticated}
-              fetchForumPost={fetchForumPost}
-              addCommentToPost={addCommentToPost}
-              replyToComment={replyToComment}
-              likePost={likePost}
-              likeComment={likeComment}
-            />
+                    isLoading={isLoading.forum}
+                    errors={errors.forum}
+                    forumPosts={forumPosts}
+                    isAuthenticated={isAuthenticated}
+                    fetchForumPost={fetchForumPost}
+                    addCommentToPost={addCommentToPost}
+                    replyToComment={replyToComment}
+                    likePost={likePost}
+                    likeComment={likeComment}
+                    loadMorePosts={loadMoreForumPosts}
+                  />
           </div>
         )}
         
@@ -587,6 +714,7 @@ const Community = () => {
           </div>
         )}
       </div>
+
     </div>
   );
 };
