@@ -47,29 +47,29 @@ const createPlantsData = async (req, res) => {
         if (existingPlant) {
           return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Plant with this name already exists' });
         }
-    
+
         // Enum validations
         const validCategories = ['foliage', 'flowering', 'succulent', 'cactus', 'herb', 'tree', 'vine', 'fern'];
         const validLight = ['low', 'medium', 'high'];
         const validDifficulty = ['easy', 'medium', 'hard'];
-    
+
         if (!validCategories.includes(category)) {
           return res.status(StatusCodes.BAD_REQUEST).json({ error: `Invalid category. Valid options: ${validCategories.join(', ')}` });
         }
-    
+
         if (!validLight.includes(light)) {
           return res.status(StatusCodes.BAD_REQUEST).json({ error: `Invalid light level. Valid options: ${validLight.join(', ')}` });
         }
-    
+
         if (!validDifficulty.includes(difficulty)) {
           return res.status(StatusCodes.BAD_REQUEST).json({ error: `Invalid difficulty. Valid options: ${validDifficulty.join(', ')}` });
         }
-    
+
         // Boolean check
         if (typeof toxic !== 'boolean') {
           return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Toxic field must be a boolean (true or false)' });
         }
-    
+
     const plantsData = await PlantsData.create({ name, commercialName, category, image, light, water, humidity, temperature, soil, difficulty, toxic, growth, propagation, description })
     res.status(StatusCodes.CREATED).json(plantsData)
   } catch (error) {
@@ -123,17 +123,29 @@ const deletePlantsData = async (req, res) => {
 // Get all questions
 const getAllQuestionsData = async (req, res) => {
   try {
+    // Use populate to get the full answer details for each question's replies
     const questionsData = await Questions.find({})
-    res.status(StatusCodes.OK).json(questionsData)
+      .populate({
+        path: 'replies',
+        model: 'Answers',
+        select: 'body user upVotes downVotes createdAt'
+      })
+      .populate({
+        path: 'user',
+        model: 'User',
+        select: 'name'
+      });
+
+    res.status(StatusCodes.OK).json(questionsData);
   } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error fetching questions data' })
+    console.error("Error fetching questions:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error fetching questions data' });
   }
 }
 
 // Get question by ID
 const getQuestionsDataById = async (req, res) => {
   const { id } = req.params
-  const userId = req.user._id; // Assuming req.user contains the authenticated user's details
 
   try {
     // Validate the ID format
@@ -141,8 +153,19 @@ const getQuestionsDataById = async (req, res) => {
       return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Invalid ID format' });
     }
 
-    // Fetch question from the database
+    // Fetch question from the database with populated replies
     const questionsData = await Questions.findById(id)
+      .populate({
+        path: 'replies',
+        model: 'Answers',
+        select: 'body user upVotes downVotes createdAt'
+      })
+      .populate({
+        path: 'user',
+        model: 'User',
+        select: 'name'
+      });
+
     if (!questionsData) {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Question not found' });
     }
@@ -150,6 +173,7 @@ const getQuestionsDataById = async (req, res) => {
     // Respond with the question data
     res.status(StatusCodes.OK).json(questionsData);
   } catch (error) {
+    console.error("Error fetching question:", error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error fetching question' });
   }
 }
@@ -321,11 +345,22 @@ const undoReraiseQuestion = async (req, res) => {
 
 //CRUDS for answers data
 // Get all answers
-const getAllAnswersData = async (req, res) => {
+const getAllAnswersData = async (_, res) => {
   try {
-    const answers = await Answers.find({});
+    const answers = await Answers.find({})
+      .populate({
+        path: 'user',
+        model: 'User',
+        select: 'name'
+      })
+      .populate({
+        path: 'questionAnswered',
+        model: 'Questions',
+        select: 'questionAsked'
+      });
     res.status(StatusCodes.OK).json(answers);
   } catch (error) {
+    console.error("Error fetching answers:", error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error fetching answers' });
   }
 };
@@ -346,25 +381,35 @@ const getAnswersDataById = async (req, res) => {
 
 // Create a new answer
 const createAnswersData = async (req, res) => {
-  const { user, question, body } = req.body;
+  const { user, body, questionAnswered } = req.body;
 
   // Check for missing required fields
-  if (!user || !question || !body) {
+  if (!user || !questionAnswered || !body) {
     return res.status(StatusCodes.BAD_REQUEST).json({ error: 'User, question, and body are required' });
   }
 
   try {
     // Check if the question exists
-    const foundQuestion = await Questions.findById(question);
+    const foundQuestion = await Questions.findById(questionAnswered);
 
     if (!foundQuestion) {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Question not found' });
     }
 
     // Create a new answer
-    const newAnswer = await Answers.create({ user, question, body });
+    const newAnswer = await Answers.create({
+      user: user,
+      body,
+      questionAnswered: questionAnswered,
+    });
+
+    // Update the question to include this answer in its replies array
+    foundQuestion.replies.push(newAnswer._id);
+    await foundQuestion.save();
+
     res.status(StatusCodes.CREATED).json(newAnswer);
   } catch (error) {
+    console.error("Error details:", error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error creating answer' });
   }
 };
@@ -500,11 +545,12 @@ const downVoteAnswer = async (req, res) => {
   }
 };
 // Get all guides data
-const getAllGuidesData = async (req, res) => {
+const getAllGuidesData = async (_, res) => {
   try {
     const guidesData = await GuidesData.find({});
     res.status(StatusCodes.OK).json(guidesData);
   } catch (error) {
+    console.error("Error fetching guides:", error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error fetching guides data' });
   }
 };

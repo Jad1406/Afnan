@@ -1,7 +1,3 @@
-
-
-
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,7 +7,7 @@ import {jwtDecode} from 'jwt-decode'; // Add this package: npm install jwt-decod
 const AuthContext = createContext();
 
 // API base URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
