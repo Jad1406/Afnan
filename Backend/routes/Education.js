@@ -44,7 +44,7 @@ const asyncWrapper = require('../middleware/async')
 //Routes for the plants data
 router.get('/plants', asyncWrapper(getAllPlantsData))
 router.get('/plants/:id', asyncWrapper(getPlantsDataById))
-router.post('/plants', auth, asyncWrapper(createPlantsData))
+router.post('/plants', isAdmin, asyncWrapper(createPlantsData))
 router.patch('/plants/:id', auth, asyncWrapper(updatePlantsData))
 router.delete('/plants/:id', auth, asyncWrapper(deletePlantsData))
 
@@ -61,7 +61,7 @@ router.post('/questions/undoreraise/:id', auth, asyncWrapper(undoReraiseQuestion
 //Routes for the answers data
 router.get('/answers', asyncWrapper(getAllAnswersData))
 router.get('/answers/:id', asyncWrapper(getAnswersDataById))
-router.post('/answers', auth, asyncWrapper(createAnswersData))
+router.post('/answers', asyncWrapper(createAnswersData))
 router.patch('/answers/:id', auth, asyncWrapper(updateAnswersData))
 router.delete('/answers/:id', auth, asyncWrapper(deleteAnswersData))
 router.get('/answers/user/:id', auth, asyncWrapper(getAnswersFromUser))

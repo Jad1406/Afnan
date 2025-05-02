@@ -37,7 +37,7 @@ app.use(express.json());
 
   // CORS middleware
   
-const allowedOrigins = ['http://localhost:3001']; // Add your frontend origin here
+const allowedOrigins = ['http://localhost:3001','http://localhost:3000','http://localhost:5000']; // Add your frontend origin here
 
 app.use(cors({
   origin: function (origin, callback) {
