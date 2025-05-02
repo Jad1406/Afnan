@@ -232,7 +232,7 @@
 
   /* Depth-based styling for odd depths (1, 3, 5...) */
 .depth-even {
-    background: #e8f5e9; /* Light green background */
+    background: #dfe0da ; /* dark gray background */
     border-left: 3px solid #4caf50;
     padding-left: 15px;
   }
@@ -244,7 +244,7 @@
   
   /* Depth-based styling for even depths (2, 4, 6...) */
   .depth-odd:not(.depth-0) {
-    background: #e3f2fd; /* Light blue background */
+    background: #ecede6; /* Light gray background */
     border-left: 3px solid #2196f3;
     padding-left: 15px;
   }
