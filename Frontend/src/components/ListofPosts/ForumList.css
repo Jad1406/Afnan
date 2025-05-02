@@ -28,3 +28,43 @@
   border-radius: 8px;
   margin: 20px 0;
 }
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.load-more-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.load-more-button:hover {
+  background-color: #388e3c;
+}
+
+.load-more-button:disabled {
+  background-color: #9e9e9e;
+  cursor: not-allowed;
+}
+
+.dark .load-more-button {
+  background-color: #81c784;
+  color: #111;
+}
+
+.dark .load-more-button:hover {
+  background-color: #66bb6a;
+}
+
+.dark .load-more-button:disabled {
+  background-color: #616161;
+  color: #e0e0e0;
+}
