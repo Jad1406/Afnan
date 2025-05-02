@@ -1,0 +1,141 @@
+/* ProfileInfo.css */
+.profile-info {
+    min-height: 300px;
+  }
+  
+  .form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .form-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #4a5568;
+    font-size: 1.125rem;
+  }
+  
+  .form-hint {
+    color: #718096;
+    font-size: 0.875rem;
+    margin-top: -0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  }
+  
+  .form-group input:disabled {
+    background-color: #f7fafc;
+    cursor: not-allowed;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 0.875rem;
+  }
+  
+  .btn.primary {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .btn.primary:hover:not(:disabled) {
+    background-color: #388e3c;
+  }
+  
+  .btn.outline {
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+  }
+  
+  .btn.outline:hover {
+    background-color: #f7fafc;
+  }
+  
+  .btn.danger {
+    background-color: #f56565;
+    color: white;
+  }
+  
+  .btn.danger:hover {
+    background-color: #e53e3e;
+  }
+  
+  .btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  
+  .delete-account {
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .delete-account h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #e53e3e;
+    font-size: 1.125rem;
+  }
+  
+  .delete-account p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+  }
+  
+  .message {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+  }
+  
+  .message.success {
+    background-color: #c6f6d5;
+    color: #2f855a;
+    border-left: 4px solid #2f855a;
+  }
+  
+  .message.error {
+    background-color: #fed7d7;
+    color: #c53030;
+    border-left: 4px solid #c53030;
+  }

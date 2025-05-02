@@ -20,62 +20,135 @@ const checkOwnership = async (userId, contentId, model) => {
 // ==== FORUM CONTROLLERS ====
 
 // Get all forum posts with pagination and filtering
+// const getAllForumPosts = async (req, res) => {
+//   const { category, tag, solved, sort = 'latest', page = 1, limit = 10 } = req.query;
+  
+//   // Build the query
+//   const queryObject = { postType: 'ForumPost' };
+  
+//   if (category) {
+//     queryObject.category = category;
+//   }
+  
+//   if (tag) {
+//     queryObject.tags = tag;
+//   }
+  
+//   if (solved === 'true') {
+//     queryObject.isSolved = true;
+//   } else if (solved === 'false') {
+//     queryObject.isSolved = false;
+//   }
+  
+//   // Sort options
+//   let sortOption = {};
+//   if (sort === 'latest') {
+//     sortOption = { createdAt: -1 };
+//   } else if (sort === 'oldest') {
+//     sortOption = { createdAt: 1 };
+//   } else if (sort === 'mostLiked') {
+//     sortOption = { 'likes.length': -1, createdAt: -1 };
+//   } else if (sort === 'mostCommented') {
+//     sortOption = { 'comments.length': -1, createdAt: -1 };
+//   }
+  
+//   // Execute the query with pagination
+//   const skip = (Number(page) - 1) * Number(limit);
+  
+//   const posts = await ForumPost.find(queryObject)
+//     .sort(sortOption)
+//     .skip(skip)
+//     .limit(Number(limit))
+//     .populate('user', 'name avatar')
+//     .populate({
+//       path: 'comments',
+//       options: { limit: 2, sort: { createdAt: -1 } },
+//       populate: { path: 'user', select: 'name avatar' }
+//     });
+  
+//   // Get total count for pagination
+//   const totalPosts = await ForumPost.countDocuments(queryObject);
+  
+//   res.status(StatusCodes.OK).json({
+//     posts,
+//     totalPosts,
+//     numOfPages: Math.ceil(totalPosts / Number(limit))
+//     ,postsPerPage: Number(limit)
+//   });
+// };
+
 const getAllForumPosts = async (req, res) => {
-  const { category, tag, solved, sort = 'latest', page = 1, limit = 10 } = req.query;
-  
-  // Build the query
-  const queryObject = { postType: 'ForumPost' };
-  
-  if (category) {
-    queryObject.category = category;
+  try {
+    // Check if detailed view with comments is requested
+    const includeComments = req.query.includeComments === 'true';
+    
+    // Base query to find all posts
+    let query = Post.find({ type: 'forum' })
+      .sort({ createdAt: -1 })
+      .populate('user', 'name avatar'); // Always populate the user
+    
+    // Conditionally populate comments if requested
+    if (includeComments) {
+      query = query.populate({
+        path: 'comments',
+        populate: [
+          { path: 'user', select: 'name avatar' },
+          { 
+            path: 'replies',
+            populate: { path: 'user', select: 'name avatar' }
+          }
+        ]
+      });
+    }
+    
+    const posts = await query.exec();
+    
+    // For posts with populated comments, build the comment tree
+    if (includeComments) {
+      posts.forEach(post => {
+        post.commentTree = buildCommentTree(post.comments);
+      });
+    }
+    
+    res.json({ posts });
+  } catch (error) {
+    console.error('Error fetching forum posts:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-  
-  if (tag) {
-    queryObject.tags = tag;
-  }
-  
-  if (solved === 'true') {
-    queryObject.isSolved = true;
-  } else if (solved === 'false') {
-    queryObject.isSolved = false;
-  }
-  
-  // Sort options
-  let sortOption = {};
-  if (sort === 'latest') {
-    sortOption = { createdAt: -1 };
-  } else if (sort === 'oldest') {
-    sortOption = { createdAt: 1 };
-  } else if (sort === 'mostLiked') {
-    sortOption = { 'likes.length': -1, createdAt: -1 };
-  } else if (sort === 'mostCommented') {
-    sortOption = { 'comments.length': -1, createdAt: -1 };
-  }
-  
-  // Execute the query with pagination
-  const skip = (Number(page) - 1) * Number(limit);
-  
-  const posts = await ForumPost.find(queryObject)
-    .sort(sortOption)
-    .skip(skip)
-    .limit(Number(limit))
-    .populate('user', 'name avatar')
-    .populate({
-      path: 'comments',
-      options: { limit: 2, sort: { createdAt: -1 } },
-      populate: { path: 'user', select: 'name avatar' }
-    });
-  
-  // Get total count for pagination
-  const totalPosts = await ForumPost.countDocuments(queryObject);
-  
-  res.status(StatusCodes.OK).json({
-    posts,
-    totalPosts,
-    numOfPages: Math.ceil(totalPosts / Number(limit))
-    ,postsPerPage: Number(limit)
-  });
 };
+
+// Helper function to build a comment tree
+function buildCommentTree(comments) {
+  const commentMap = {};
+  const rootComments = [];
+  
+  // First pass: create a map of comments by ID
+  comments.forEach(comment => {
+    commentMap[comment._id] = {
+      ...comment.toObject(),
+      replies: []
+    };
+  });
+  
+  // Second pass: build the tree structure
+  comments.forEach(comment => {
+    if (comment.parentComment) {
+      // This is a reply, add it to its parent's replies
+      if (commentMap[comment.parentComment]) {
+        commentMap[comment.parentComment].replies.push(commentMap[comment._id]);
+      }
+    } else {
+      // This is a root comment
+      rootComments.push(commentMap[comment._id]);
+    }
+  });
+  
+  return rootComments;
+}
+
+
+
+
  //////
 // Get a single forum post with full details including comments
 const getForumPost = async (req, res) => {

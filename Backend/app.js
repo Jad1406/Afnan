@@ -13,17 +13,26 @@ const connectDB = require('./db/connect');
 // routers
 const authRouter = require('./routes/auth');
 const marketRouter = require('./routes/Product');
-const utilRouter = require('./routes/utils');
+const reviewRouter = require('./routes/ReviewRoutes');
+const utilRouter = require('./routes/upload-util');
 const communityRouter = require('./routes/communityRoutes');
 const educationRouter = require('./routes/Education');
 const aiChatRoutes = require("./routes/aiChat");
-
+const cartRoutes = require("./routes/cartRoutes");
+const orderRoutes = require('./routes/orderRoutes'); 
+const paymentRoutes = require('./routes/paymentRoutes'); 
 
 // error handler
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandlerMiddleware = require('./middleware/error-handler');
 
+/////
 //middleware
+// Middleware - IMPORTANT: Order matters for Stripe webhook
+// Parse JSON for all routes EXCEPT the Stripe webhook route
+app.use('/api/v1/payments/webhook', express.raw({type: 'application/json'}));
+
+
 app.use(express.json());
 
   // CORS middleware
@@ -43,25 +52,27 @@ app.use(cors({
 }));
 
 
+//////////
 // routes
-// app.get('/', (req, res) => {
-//   console.log('Root route hit');
 
-//   res.status(200).send('<h1>Marketplace API</h1>');
-// });
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/market', marketRouter);
+app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/community', communityRouter);
 app.use("/api/v1/utils",utilRouter);
 app.use('/api/v1/education', educationRouter);
 app.use("/api/v1/ai", aiChatRoutes);
+app.use('/api/v1/cart', cartRoutes );
+app.use('/api/v1/orders', orderRoutes); 
+app.use('/api/v1/payments', paymentRoutes); // Register the payment routes
+
 
 //error handling
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000; //frontend uses port 3000
 
 const start = async () => {
   try {

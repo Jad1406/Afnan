@@ -1,0 +1,42 @@
+.blog-posts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  color: #555;
+  font-style: italic;
+}
+
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  text-align: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 30px 20px;
+  color: #757575;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+@media (max-width: 1200px) {
+  .blog-posts {
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .blog-posts {
+      grid-template-columns: 1fr;
+  }
+}

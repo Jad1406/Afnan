@@ -14,16 +14,19 @@ const getPublicProducts = async (req, res) => {
   res.status(StatusCodes.OK).json({ products })
 }
 
-// 🔒 Seller: create product
+// 🔒 Seller: create product (modified to remove explicit rating)
 const createProduct = async (req, res) => {
-    // Add the current user as the seller
-    req.body.seller = req.user.userId;
-    
-    // Create the product with data from req.body (including image URL)
-    const product = await Product.create(req.body);
-    
-    res.status(StatusCodes.CREATED).json({ product });
-
+  // Add the current user as the seller
+  req.body.seller = req.user.userId;
+  
+  // Initialize rating fields (these will be updated by reviews)
+  req.body.averageRating = 0;
+  req.body.numRatings = 0;
+  
+  // Create the product with data from req.body
+  const product = await Product.create(req.body);
+  
+  res.status(StatusCodes.CREATED).json({ product });
 };
 
 // 🔒 Seller: get their products
