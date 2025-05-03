@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+
+
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Comment from './Comment';
 import './ForumPost.css';
@@ -11,7 +13,7 @@ const ForumPost = ({
   replyToComment, 
   likePost, 
   likeComment,
-  currentUserId // Add this prop to check if the current user has liked posts/comments
+  currentUserId 
 }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -19,18 +21,42 @@ const ForumPost = ({
   const commentInputRef = useRef(null);
   const [topLevelComments, setTopLevelComments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLiked, setIsLiked] = useState(
-    // Check if current user has liked this post
-    currentUserId && post.likes && 
-    Array.isArray(post.likes) && 
-    post.likes.includes(currentUserId)
-  );
   
+  // Track post likes state locally
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  
+// Inside the ForumPost component:
+
+// Inside useEffect to check likes
+useEffect(() => {
+  if (!post || !currentUserId) {
+    setIsLiked(false);
+    setLikeCount(0);
+    return;
+  }
+  
+  // Check if post.likes exists and is an array
+  if (Array.isArray(post.likes)) {
+    // Convert all IDs to strings for consistent comparison
+    const likesAsStrings = post.likes.map(id => 
+      typeof id === 'object' ? id.toString() : String(id)
+    );
+    const userIdString = String(currentUserId);
+    
+    // Check if current user ID is in the likes array
+    setIsLiked(likesAsStrings.includes(userIdString));
+    setLikeCount(post.likesCount || post.likes.length);
+  } else {
+    // Default values if likes is not an array
+    setIsLiked(false);
+    setLikeCount(post.likesCount || 0);
+  }
+}, [post, currentUserId]);
   // Expand post and load comments if needed
   const handleExpandPost = async (e) => {
     e.stopPropagation();
     
-    // If already expanded, just collapse
     if (isExpanded) {
       setIsExpanded(false);
       return;
@@ -39,10 +65,8 @@ const ForumPost = ({
     setIsLoading(true);
     
     try {
-      // Fetch the post with full comments
       const response = await fetchForumPost(post.id || post._id);
       
-      // Extract top-level comments
       if (response && response.topLevelComments) {
         setTopLevelComments(response.topLevelComments);
       }
@@ -93,15 +117,28 @@ const ForumPost = ({
     }
   };
   
-  // Handle like post button click
+  // Handle like post button click with optimistic UI update
   const handleLikePost = (e) => {
     e.stopPropagation();
     
-    // Toggle liked state in UI immediately for responsive feel
-    setIsLiked(!isLiked);
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    // Toggle liked state immediately for responsive UI
+    const newLikedState = !isLiked;
+    setIsLiked(newLikedState);
+    
+    // Update like count optimistically
+    setLikeCount(prevCount => newLikedState ? prevCount + 1 : prevCount - 1);
     
     // Call the likePost function
-    likePost(post.id || post._id);
+    likePost(post.id || post._id).catch(() => {
+      // Revert UI changes if API call fails
+      setIsLiked(!newLikedState);
+      setLikeCount(prevCount => !newLikedState ? prevCount + 1 : prevCount - 1);
+    });
   };
   
   // Focus comment input when Reply button is clicked
@@ -138,9 +175,8 @@ const ForumPost = ({
               'Unknown date')}
           </span>
 
-
           <span className={`post-likes ${isLiked ? 'liked' : ''}`}>
-            ❤️ {post.likes?.length || post.likes || 0}
+            ❤️ {likeCount}
           </span>
           {post.isSolved && <span className="post-solved">✓ Solved</span>}
         </div>
@@ -158,7 +194,6 @@ const ForumPost = ({
         </div>
       )}
       
-      {/* Always show post actions */}
       <div className="post-actions">
         <button 
           className="action-button"
@@ -176,16 +211,15 @@ const ForumPost = ({
           className="action-button"
           onClick={handleExpandPost}
         >
-          {isExpanded ? 'Collapse' : `Comments (${post.commentCount || 0})`}
+          {console.log('post.comments.length', post.comments.length)}
+          {isExpanded ? 'Collapse' : `Comments (${post.comments.length || 0})`}
         </button>
       </div>
       
-      {/* Show comments section when expanded */}
       {isExpanded && (
         <div className="post-replies" onClick={e => e.stopPropagation()}>
-          <h4>{post.commentCount || 0} {post.commentCount === 1 ? 'Reply' : 'Replies'}</h4>
+          <h4>{post.comments.length || 0} {post.comments.length === 1 ? 'Reply' : 'Replies'}</h4>
           
-          {/* Add comment form */}
           <div className="add-reply">
             <textarea 
               ref={commentInputRef}
@@ -203,7 +237,6 @@ const ForumPost = ({
             </button>
           </div>
           
-          {/* Display comments */}
           {isLoading ? (
             <div className="loading-comments">Loading comments...</div>
           ) : topLevelComments.length > 0 ? (
