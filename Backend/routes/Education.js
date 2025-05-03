@@ -9,7 +9,7 @@ const {
     createPlantsData,
     updatePlantsData,
     deletePlantsData,
-  
+
     getAllQuestionsData,
     getQuestionsDataById,
     createQuestionsData,
@@ -18,7 +18,7 @@ const {
     getQuestionsFromUser,
     reraiseQuestion,
     undoReraiseQuestion,
-  
+
     getAllAnswersData,
     getAnswersDataById,
     createAnswersData,
@@ -27,7 +27,7 @@ const {
     getAnswersFromUser,
     upVoteAnswer,
     downVoteAnswer,
-  
+
     //These should only be available to admins
     getAllGuidesData,
     getGuidesDataById,
@@ -61,7 +61,7 @@ router.post('/questions/undoreraise/:id', auth, asyncWrapper(undoReraiseQuestion
 //Routes for the answers data
 router.get('/answers', asyncWrapper(getAllAnswersData))
 router.get('/answers/:id', asyncWrapper(getAnswersDataById))
-router.post('/answers', asyncWrapper(createAnswersData))
+router.post('/answers', auth, asyncWrapper(createAnswersData))
 router.patch('/answers/:id', auth, asyncWrapper(updateAnswersData))
 router.delete('/answers/:id', auth, asyncWrapper(deleteAnswersData))
 router.get('/answers/user/:id', auth, asyncWrapper(getAnswersFromUser))

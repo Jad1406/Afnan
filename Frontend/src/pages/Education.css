@@ -1050,3 +1050,138 @@
 .dark .submit-btn:hover {
     background-color: var(--primary-color);
 }
+
+/* Enhanced modal styles */
+.modal-instruction {
+    margin-bottom: 20px;
+    color: #666;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.dark .modal-instruction {
+    color: #aaa;
+}
+
+.required {
+    color: #e74c3c;
+    margin-left: 3px;
+}
+
+.input-error {
+    border-color: #e74c3c !important;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: block;
+}
+
+.submit-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.dark .submit-btn:disabled {
+    background-color: #555;
+}
+
+.submit-btn:disabled:hover {
+    background-color: #ccc;
+}
+
+.dark .submit-btn:disabled:hover {
+    background-color: #555;
+}
+
+/* Success message */
+.success-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #2ecc71;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    animation: slide-down 0.5s ease-out;
+    font-weight: 500;
+}
+
+@keyframes slide-down {
+    0% {
+        transform: translateX(-50%) translateY(-50px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+.fade-out {
+    animation: fade-out 0.5s ease-out forwards;
+}
+
+@keyframes fade-out {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Ask Question Container */
+.ask-question-container {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dark .ask-question-container {
+    background-color: #333;
+}
+
+.big-ask-question-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background-color 0.2s;
+    font-weight: 500;
+}
+
+.dark .big-ask-question-btn {
+    background-color: var(--primary-light);
+}
+
+.big-ask-question-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark .big-ask-question-btn:hover {
+    background-color: var(--primary-color);
+}
+
+.ask-question-container p {
+    color: #666;
+    margin: 0;
+}
+
+.dark .ask-question-container p {
+    color: #aaa;
+}

@@ -181,35 +181,70 @@ const getQuestionsDataById = async (req, res) => {
 
 // Create question
 const createQuestionsData = async (req, res) => {
-  const { questionAsked, body, category, image, user } = req.body;
+  const { questionAsked, body, category, image } = req.body;
+  const userId = req.user.userId; // Get user ID from authenticated request
 
-  // Validate required fields
-  if (!questionAsked || questionAsked.trim().length < 5) {
-    return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Question title is required and must be at least 5 characters long' })
+  // Predefined valid categories from schema enum
+  const validCategories = [
+    'light', 'water', 'humidity', 'temperature', 'soil',
+    'difficulty', 'toxic', 'growth', 'propagation', 'description'
+  ];
+
+  // === Input validation matching schema ===
+
+  // Validate questionAsked: required and minimum 10 characters
+  if (!questionAsked || questionAsked.trim().length < 10) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Question title must be at least 10 characters long'
+    });
   }
 
-  if (!body || body.trim().length < 10) {
-    return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Question body is required and must be at least 10 characters long' })
+  // Validate body: required and minimum 20 characters
+  if (!body || body.trim().length < 20) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Question body must be at least 20 characters long'
+    });
   }
 
-  if (!category || category.trim() === '') {
-    return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Category is required' })
+  // Validate category: required and must match one of the allowed values
+  if (!category || !validCategories.includes(category.trim().toLowerCase())) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Invalid or missing category'
+    });
+  }
+
+  // Validate image (if provided): must match the allowed formats
+  let validImage = null;
+  if (image && image.trim() !== '') {
+    const urlRegex = /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i;
+    if (!urlRegex.test(image)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        error: 'Invalid image URL format'
+      });
+    }
+    validImage = image.trim();
   }
 
   try {
+    // Create the question document
     const questionsData = await Questions.create({
-      // user: req.user._id,
-      user,
+      user: userId,
       questionAsked: questionAsked.trim(),
       body: body.trim(),
       category: category.trim().toLowerCase(),
-      image: image || null
-    })
-    res.status(StatusCodes.CREATED).json(questionsData)
+      image: validImage
+    });
+
+    res.status(StatusCodes.CREATED).json(questionsData);
   } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error creating question' })
+    console.error("Error creating question:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      error: 'Error creating question',
+      details: error.message
+    });
   }
-}
+};
+
 
 // Update question (if within 24 hours)
 const updateQuestionsData = async (req, res) => {
@@ -291,7 +326,18 @@ const getQuestionsFromUser = async (req, res) => {
 // Reraise question (increment and track users who reraised)
 const reraiseQuestion = async (req, res) => {
   const { id } = req.params
-  const userId = req.user._id // Assuming req.user contains the logged-in user's details
+  let userId;
+
+  try {
+    // Convert userId string to MongoDB ObjectId
+    userId = mongoose.Types.ObjectId.createFromHexString(req.user.userId);
+  } catch (error) {
+    console.error('Error converting userId to ObjectId:', error);
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Invalid user ID format',
+      details: error.message
+    });
+  }
 
   try {
     const question = await Questions.findById(id)
@@ -299,14 +345,18 @@ const reraiseQuestion = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Question not found' })
     }
 
+    // Initialize array if it doesn't exist
+    if (!question.reraisedBy) question.reraisedBy = [];
+
     // Check if the user has already reraised the question
-    if (question.reraisedBy.includes(userId)) {
+    const alreadyReraised = question.reraisedBy.some(id => id.equals(userId));
+    if (alreadyReraised) {
       return res.status(StatusCodes.BAD_REQUEST).json({ error: 'You have already reraised this question' })
     }
 
     // Add the user to the reraisedBy array and increment reraised count
     question.reraisedBy.push(userId)
-    question.reraised += 1
+    question.reraised = (question.reraised || 0) + 1
 
     const updatedQuestion = await question.save()
     res.status(StatusCodes.OK).json(updatedQuestion)
@@ -319,7 +369,18 @@ const reraiseQuestion = async (req, res) => {
 // Undo reraise (decrement and remove user)
 const undoReraiseQuestion = async (req, res) => {
   const { id } = req.params
-  const userId = req.user._id // Assuming req.user contains the logged-in user's details
+  let userId;
+
+  try {
+    // Convert userId string to MongoDB ObjectId
+    userId = mongoose.Types.ObjectId.createFromHexString(req.user.userId);
+  } catch (error) {
+    console.error('Error converting userId to ObjectId:', error);
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Invalid user ID format',
+      details: error.message
+    });
+  }
 
   try {
     const question = await Questions.findById(id)
@@ -327,14 +388,18 @@ const undoReraiseQuestion = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Question not found' })
     }
 
+    // Initialize array if it doesn't exist
+    if (!question.reraisedBy) question.reraisedBy = [];
+
     // Check if the user has already reraised the question
-    if (!question.reraisedBy.includes(userId)) {
+    const hasReraised = question.reraisedBy.some(id => id.equals(userId));
+    if (!hasReraised) {
       return res.status(StatusCodes.BAD_REQUEST).json({ error: 'You have not reraised this question' })
     }
 
     // Remove the user from the reraisedBy array and decrement the reraised count
-    question.reraisedBy = question.reraisedBy.filter(user => user.toString() !== userId.toString())
-    question.reraised -= 1
+    question.reraisedBy = question.reraisedBy.filter(id => !id.equals(userId))
+    question.reraised = Math.max(0, (question.reraised || 0) - 1) // Ensure we don't go below 0
 
     const updatedQuestion = await question.save()
     res.status(StatusCodes.OK).json(updatedQuestion)
@@ -381,11 +446,12 @@ const getAnswersDataById = async (req, res) => {
 
 // Create a new answer
 const createAnswersData = async (req, res) => {
-  const { user, body, questionAnswered } = req.body;
+  const { body, questionAnswered } = req.body;
+  const userId = req.user.userId; // Get user ID from authenticated request
 
   // Check for missing required fields
-  if (!user || !questionAnswered || !body) {
-    return res.status(StatusCodes.BAD_REQUEST).json({ error: 'User, question, and body are required' });
+  if (!questionAnswered || !body) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Question and body are required' });
   }
 
   try {
@@ -398,7 +464,7 @@ const createAnswersData = async (req, res) => {
 
     // Create a new answer
     const newAnswer = await Answers.create({
-      user: user,
+      user: userId,
       body,
       questionAnswered: questionAnswered,
     });
@@ -482,66 +548,138 @@ const getAnswersFromUser = async (req, res) => {
 // Upvote an answer
 const upVoteAnswer = async (req, res) => {
   const { id } = req.params;
-  const userId = req.user._id // Assuming req.user contains the logged-in user's details
+  let userId;
 
   try {
+    // Convert userId string to MongoDB ObjectId
+    userId = mongoose.Types.ObjectId.createFromHexString(req.user.userId);
+  } catch (error) {
+    console.error('Error converting userId to ObjectId:', error);
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Invalid user ID format',
+      details: error.message
+    });
+  }
+
+  console.log('Upvote request:', { answerId: id, userId: userId.toString(), user: req.user });
+
+  try {
+    // Validate the answer ID
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Invalid answer ID format' });
+    }
+
     const answer = await Answers.findById(id);
+    console.log('Answer found:', answer);
+
     if (!answer) {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Answer not found' });
     }
 
+    // Initialize arrays if they don't exist
+    if (!answer.upVotedBy) answer.upVotedBy = [];
+    if (!answer.downVotedBy) answer.downVotedBy = [];
+
     // Check if the user has already upvoted the answer
-    if (answer.upVotedBy.includes(userId)) {
+    const alreadyUpvoted = answer.upVotedBy.some(id => id && id.equals(userId));
+    console.log('Already upvoted:', alreadyUpvoted);
+
+    if (alreadyUpvoted) {
       return res.status(StatusCodes.BAD_REQUEST).json({ error: 'You have already upvoted this answer' });
     }
 
     // If the user previously downvoted, remove them from the downvoted list
-    if (answer.downVotedBy.includes(userId)) {
-      answer.downVotedBy = answer.downVotedBy.filter(user => user.toString() !== userId.toString());
-      answer.downVotes -= 1; // Decrement downvotes
+    const downvoteIndex = answer.downVotedBy.findIndex(id => id && id.equals(userId));
+    console.log('Downvote index:', downvoteIndex);
+
+    if (downvoteIndex !== -1) {
+      answer.downVotedBy.splice(downvoteIndex, 1);
+      answer.downVotes = Math.max(0, (answer.downVotes || 0) - 1); // Ensure we don't go below 0
     }
 
     // Add the user to the upvoted list and increment the upvote count
     answer.upVotedBy.push(userId);
-    answer.upVotes += 1;
+    answer.upVotes = (answer.upVotes || 0) + 1;
 
     const updatedAnswer = await answer.save();
+    console.log('Updated answer:', updatedAnswer);
+
     res.status(StatusCodes.OK).json(updatedAnswer);
   } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error upvoting answer' });
+    console.error('Error in upVoteAnswer:', error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      error: 'Error upvoting answer',
+      details: error.message
+    });
   }
 };
 
 // Downvote an answer
 const downVoteAnswer = async (req, res) => {
   const { id } = req.params;
-  const userId = req.user._id // Assuming req.user contains the logged-in user's details
+  let userId;
 
   try {
+    // Convert userId string to MongoDB ObjectId
+    userId = mongoose.Types.ObjectId.createFromHexString(req.user.userId);
+  } catch (error) {
+    console.error('Error converting userId to ObjectId:', error);
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: 'Invalid user ID format',
+      details: error.message
+    });
+  }
+
+  console.log('Downvote request:', { answerId: id, userId: userId.toString(), user: req.user });
+
+  try {
+    // Validate the answer ID
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Invalid answer ID format' });
+    }
+
     const answer = await Answers.findById(id);
+    console.log('Answer found:', answer);
+
     if (!answer) {
       return res.status(StatusCodes.NOT_FOUND).json({ error: 'Answer not found' });
     }
 
+    // Initialize arrays if they don't exist
+    if (!answer.downVotedBy) answer.downVotedBy = [];
+    if (!answer.upVotedBy) answer.upVotedBy = [];
+
     // Check if the user has already downvoted the answer
-    if (answer.downVotedBy.includes(userId)) {
+    const alreadyDownvoted = answer.downVotedBy.some(id => id.equals(userId));
+    console.log('Already downvoted:', alreadyDownvoted);
+
+    if (alreadyDownvoted) {
       return res.status(StatusCodes.BAD_REQUEST).json({ error: 'You have already downvoted this answer' });
     }
 
     // If the user previously upvoted, remove them from the upvoted list
-    if (answer.upVotedBy.includes(userId)) {
-      answer.upVotedBy = answer.upVotedBy.filter(user => user.toString() !== userId.toString());
-      answer.upVotes -= 1; // Decrement upvotes
+    const upvoteIndex = answer.upVotedBy.findIndex(id => id && id.equals(userId));
+    console.log('Upvote index:', upvoteIndex);
+
+    if (upvoteIndex !== -1) {
+      answer.upVotedBy.splice(upvoteIndex, 1);
+      answer.upVotes = Math.max(0, (answer.upVotes || 0) - 1); // Ensure we don't go below 0
     }
 
     // Add the user to the downvoted list and increment the downvote count
     answer.downVotedBy.push(userId);
-    answer.downVotes += 1;
+    answer.downVotes = (answer.downVotes || 0) + 1;
 
     const updatedAnswer = await answer.save();
+    console.log('Updated answer:', updatedAnswer);
+
     res.status(StatusCodes.OK).json(updatedAnswer);
   } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error downvoting answer' });
+    console.error('Error in downVoteAnswer:', error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      error: 'Error downvoting answer',
+      details: error.message
+    });
   }
 };
 // Get all guides data

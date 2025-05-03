@@ -10,6 +10,8 @@ import fiddleLeafImage from '../assets/images/fiddle-leaf.156c60ff0976bd146865.j
 import pothosImage from '../assets/images/pothos.66f1e2c06f7825e20421.jpeg';
 import spiderPlantImage from '../assets/images/spider-plant.1c977f7f6c6a2e418cf0.jpeg';
 import zzPlantImage from '../assets/images/zz-plant.7c181c45ab6059252490.jpeg';
+import {useAuth} from '../components/Auth/AuthContext';
+
 
 const Education = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,11 +26,15 @@ const Education = () => {
   const [newQuestion, setNewQuestion] = useState({
     questionAsked: '',
     body: '',
-    category: ''
+    category: 'light' // Default category
   });
 
   // State for answers
   const [answers, setAnswers] = useState({});  // Object to store answers for each question
+
+  const { user } = useAuth();
+  const token = localStorage.getItem('token');
+
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -49,9 +55,13 @@ const Education = () => {
     fetchAllData();
   }, []);
 
+
+  const baseUrl = 'http://localhost:5000/api/v1';
+
+
   const fetchPlantsData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/education/plants', {
+      const response = await fetch(`${baseUrl}/education/plants`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -74,7 +84,7 @@ const Education = () => {
 
   const fetchGuidesData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/education/guides', {
+      const response = await fetch(`${baseUrl}/education/guides`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -97,7 +107,7 @@ const Education = () => {
 
   const fetchQuestionsData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/education/questions', {
+      const response = await fetch(`${baseUrl}/education/questions`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -387,25 +397,32 @@ const Education = () => {
 
   // Submit a new question
   const submitQuestion = async () => {
-    // Validate inputs
-    if (!newQuestion.questionAsked.trim() || !newQuestion.body.trim()) {
-      alert("Please fill in all required fields");
+    // Check if user is authenticated
+    if (!user || !token) {
+      alert("You need to be logged in to ask a question. Please log in and try again.");
       return;
     }
 
+    // Validate inputs (this is now also handled by the disabled button)
+    if (!newQuestion.questionAsked.trim() || !newQuestion.body.trim()) {
+      return;
+    }
+
+    // Show loading state
+    const submitBtn = document.querySelector('.submit-btn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Submitting...';
+    submitBtn.disabled = true;
+
     try {
-      const response = await fetch('http://localhost:5000/api/v1/education/questions', {
+      const response = await fetch(`${baseUrl}/education/questions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // In a real app, you would include authentication
-          // 'Authorization': `Bearer ${userToken}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...newQuestion,
-          // For demo purposes, we'll use a hardcoded user ID
-          // In a real app, this would come from authentication
-          user: "64f8b0e87d55d0a0d4d0f7a1" // Example user ID
+          ...newQuestion
         })
       });
 
@@ -419,8 +436,21 @@ const Education = () => {
         setShowQuestionModal(false);
 
         // Refresh questions data
-        fetchQuestionsData();
-        alert("Question submitted successfully!");
+        await fetchQuestionsData();
+
+        // Show success message
+        const successMessage = document.createElement('div');
+        successMessage.className = 'success-message';
+        successMessage.textContent = 'Your question has been submitted successfully!';
+        document.body.appendChild(successMessage);
+
+        // Remove success message after 3 seconds
+        setTimeout(() => {
+          successMessage.classList.add('fade-out');
+          setTimeout(() => {
+            document.body.removeChild(successMessage);
+          }, 500);
+        }, 3000);
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.error || 'Failed to submit question'}`);
@@ -428,24 +458,43 @@ const Education = () => {
     } catch (error) {
       console.error("Error submitting question:", error);
       alert("Failed to submit question. Please try again.");
+    } finally {
+      // Reset button state
+      if (submitBtn) {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
     }
   };
 
   // Submit an answer to a question
   const submitAnswer = async (questionId) => {
+    // Check if user is authenticated
+    if (!user || !token) {
+      alert("You need to be logged in to answer a question. Please log in and try again.");
+      return;
+    }
+
     if (!answers[questionId] || !answers[questionId].trim()) {
       alert("Please enter your answer");
       return;
     }
 
+    // Find the submit button for this specific answer
+    const submitBtn = document.querySelector(`button[data-question-id="${questionId}"]`);
+    if (submitBtn) {
+      submitBtn.textContent = 'Submitting...';
+      submitBtn.disabled = true;
+    }
+
     try {
-      const response = await fetch('http://localhost:5000/api/v1/education/answers', {
+      const response = await fetch(`${baseUrl}/education/answers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          user: "68148edcd7f190649b6af76f",
           body: answers[questionId],
           questionAnswered: questionId,
         })
@@ -459,8 +508,21 @@ const Education = () => {
         }));
 
         // Refresh questions data
-        fetchQuestionsData();
-        alert("Answer submitted successfully!");
+        await fetchQuestionsData();
+
+        // Show success message
+        const successMessage = document.createElement('div');
+        successMessage.className = 'success-message';
+        successMessage.textContent = 'Your answer has been submitted successfully!';
+        document.body.appendChild(successMessage);
+
+        // Remove success message after 3 seconds
+        setTimeout(() => {
+          successMessage.classList.add('fade-out');
+          setTimeout(() => {
+            document.body.removeChild(successMessage);
+          }, 500);
+        }, 3000);
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.error || 'Failed to submit answer'}`);
@@ -468,31 +530,56 @@ const Education = () => {
     } catch (error) {
       console.error("Error submitting answer:", error);
       alert("Failed to submit answer. Please try again.");
+    } finally {
+      // Reset button state
+      const submitBtn = document.querySelector(`button[data-question-id="${questionId}"]`);
+      if (submitBtn) {
+        submitBtn.textContent = 'Submit Answer';
+        submitBtn.disabled = false;
+      }
     }
   };
 
   // Handle voting on answers
   const handleVote = async (answerId, voteType) => {
+    // Check if user is authenticated
+    if (!user || !token) {
+      alert("You need to be logged in to vote on answers. Please log in and try again.");
+      return;
+    }
+
     if (!answerId) return;
 
     try {
       const endpoint = voteType === 'up'
-        ? `http://localhost:5000/api/v1/education/answers/upvote/${answerId}`
-        : `http://localhost:5000/api/v1/education/answers/downvote/${answerId}`;
+        ? `${baseUrl}/education/answers/upvote/${answerId}`
+        : `${baseUrl}/education/answers/downvote/${answerId}`;
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // In a real app, you would include authentication
-          // 'Authorization': `Bearer ${userToken}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
       if (response.ok) {
         // Refresh the questions data to show updated votes
-        fetchQuestionsData();
-        alert(`You ${voteType === 'up' ? 'upvoted' : 'downvoted'} the answer.`);
+        await fetchQuestionsData();
+
+        // Show success message
+        const successMessage = document.createElement('div');
+        successMessage.className = 'success-message';
+        successMessage.textContent = `You ${voteType === 'up' ? 'upvoted' : 'downvoted'} the answer.`;
+        document.body.appendChild(successMessage);
+
+        // Remove success message after 3 seconds
+        setTimeout(() => {
+          successMessage.classList.add('fade-out');
+          setTimeout(() => {
+            document.body.removeChild(successMessage);
+          }, 500);
+        }, 3000);
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.error || `Failed to ${voteType === 'up' ? 'upvote' : 'downvote'} answer`}`);
@@ -505,6 +592,15 @@ const Education = () => {
 
   return (
     <div className="education-page">
+      {/* Floating Ask Question Button - Always visible */}
+      <button
+        className="floating-ask-btn"
+        onClick={() => setShowQuestionModal(true)}
+        title="Ask a Question"
+      >
+        <span>+</span>
+      </button>
+
       {isLoading ? (
         <div className="loading-container">
           <div className="loading-spinner"></div>
@@ -587,7 +683,7 @@ const Education = () => {
 
                     <div className="plant-care-icons">
                       <div className="care-item" title="Light Requirements">
-                        <span className="care-icon">☀️</span>
+                        <span className="care-icon">☀</span>
                         <span className="care-label">Light:</span>
                         <span className="care-value">{plant.light}</span>
                       </div>
@@ -635,8 +731,8 @@ const Education = () => {
                     onError={handleImageError}
                   />
                   <div className="guide-icon">
-                    {guide.category === 'propagation' ? '✂️' :
-                     guide.category === 'maintenance' ? '🔄' : '🛡️'}
+                    {guide.category === 'propagation' ? '✂' :
+                     guide.category === 'maintenance' ? '🔄' : '🛡'}
                   </div>
                 </div>
                 <div className="guide-content">
@@ -649,7 +745,7 @@ const Education = () => {
 
                   <div className="guide-details">
                     <div className="guide-time">
-                      <span className="time-icon">⏱️</span>
+                      <span className="time-icon">⏱</span>
                       <span>{guide.timeRequired}</span>
                     </div>
                     <button className="read-guide-btn">Read Guide</button>
@@ -675,15 +771,22 @@ const Education = () => {
 
           {/* Question Modal */}
           {showQuestionModal && (
-            <div className="modal-overlay">
+            <div className="modal-overlay" onClick={(e) => {
+              // Close modal when clicking outside
+              if (e.target.className === 'modal-overlay') {
+                setShowQuestionModal(false);
+              }
+            }}>
               <div className="question-modal">
                 <div className="modal-header">
                   <h3>Ask a Plant Question</h3>
                   <button className="close-modal" onClick={() => setShowQuestionModal(false)}>×</button>
                 </div>
                 <div className="modal-body">
+                  <p className="modal-instruction">Share your plant care questions with our community. Be specific to get the best answers!</p>
+
                   <div className="form-group">
-                    <label htmlFor="questionAsked">Question Title:</label>
+                    <label htmlFor="questionAsked">Question Title: <span className="required">*</span></label>
                     <input
                       type="text"
                       id="questionAsked"
@@ -691,10 +794,15 @@ const Education = () => {
                       value={newQuestion.questionAsked}
                       onChange={handleQuestionInputChange}
                       placeholder="e.g., How often should I water my monstera?"
+                      className={!newQuestion.questionAsked.trim() ? 'input-error' : ''}
                     />
+                    {!newQuestion.questionAsked.trim() && (
+                      <span className="error-message">Please enter a question title</span>
+                    )}
                   </div>
+
                   <div className="form-group">
-                    <label htmlFor="body">Question Details:</label>
+                    <label htmlFor="body">Question Details: <span className="required">*</span></label>
                     <textarea
                       id="body"
                       name="body"
@@ -702,10 +810,15 @@ const Education = () => {
                       onChange={handleQuestionInputChange}
                       rows="4"
                       placeholder="Provide more details about your question..."
+                      className={!newQuestion.body.trim() ? 'input-error' : ''}
                     ></textarea>
+                    {!newQuestion.body.trim() && (
+                      <span className="error-message">Please provide details about your question</span>
+                    )}
                   </div>
+
                   <div className="form-group">
-                    <label htmlFor="category">Category:</label>
+                    <label htmlFor="category">Category: <span className="required">*</span></label>
                     <select
                       id="category"
                       name="category"
@@ -727,11 +840,28 @@ const Education = () => {
                 </div>
                 <div className="modal-footer">
                   <button className="cancel-btn" onClick={() => setShowQuestionModal(false)}>Cancel</button>
-                  <button className="submit-btn" onClick={submitQuestion}>Submit Question</button>
+                  <button
+                    className="submit-btn"
+                    onClick={submitQuestion}
+                    disabled={!newQuestion.questionAsked.trim() || !newQuestion.body.trim()}
+                  >
+                    Submit Question
+                  </button>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Add a clear call-to-action for asking questions */}
+          <div className="ask-question-container">
+            <button
+              className="big-ask-question-btn"
+              onClick={() => setShowQuestionModal(true)}
+            >
+              + Ask a New Question
+            </button>
+            <p>Have a plant care question? Our community is here to help!</p>
+          </div>
 
           <div className="questions-container">
             {questionsData.length > 0 ? (
@@ -837,6 +967,8 @@ const Education = () => {
                       <button
                         className="submit-answer-btn"
                         onClick={() => submitAnswer(question._id || question.id)}
+                        data-question-id={question._id || question.id}
+                        disabled={!answers[question._id || question.id] || !answers[question._id || question.id].trim()}
                       >
                         Submit Answer
                       </button>
