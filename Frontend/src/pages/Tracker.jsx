@@ -1,531 +1,443 @@
-// Tracker.jsx
-import React, { useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '../components/Auth/AuthContext';
+import React, { useState, useEffect } from 'react';
 import './Tracker.css';
 
 const Tracker = () => {
-
-  //Note for Tony from Jad
-  //We will need to fetch these from the database so, we need a plants model that links to a user ID
-  // State for tracked plants
-  const [myPlants, setMyPlants] = useState([
-    {
-      id: 1,
-      name: "Monstera Deliciosa",
-      nickname: "Monty",
-      image: "/images/monstera.jpg",
-      acquiredDate: "2023-03-15",
-      lastWatered: "2023-06-10",
-      wateringFrequency: 7, // days
-      lastFertilized: "2023-05-20",
-      fertilizingFrequency: 30, // days
-      location: "Living Room",
-      notes: "Putting out a new leaf! Keep an eye on it.",
-      healthStatus: "healthy"
-    },
-    {
-      id: 2,
-      name: "Fiddle Leaf Fig",
-      nickname: "Figgy",
-      image: "/images/fiddle-leaf.jpg",
-      acquiredDate: "2023-01-10",
-      lastWatered: "2023-06-08",
-      wateringFrequency: 10, // days
-      lastFertilized: "2023-05-15",
-      fertilizingFrequency: 30, // days
-      location: "Office",
-      notes: "New growth looks a bit pale - might need more light.",
-      healthStatus: "needsAttention"
-    },
-    {
-      id: 3,
-      name: "Snake Plant",
-      nickname: "Medusa",
-      image: "/images/snake-plant.jpg",
-      acquiredDate: "2022-11-20",
-      lastWatered: "2023-06-01",
-      wateringFrequency: 14, // days
-      lastFertilized: "2023-04-15",
-      fertilizingFrequency: 60, // days
-      location: "Bedroom",
-      notes: "",
-      healthStatus: "healthy"
-    }
-  ]);
-  
-  //Note from Jad to Tony
-  //This is one of the attributes of the Plant insertion
-  // State for form
-  const [isAddPlantModalOpen, setIsAddPlantModalOpen] = useState(false);
-
-  //Note from Jad to Tony
-  //Here, we will need ot create a new plant object and insert it into the database
+  const [myPlants, setMyPlants] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPlant, setEditingPlant] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [newPlant, setNewPlant] = useState({
-    name: "",
-    nickname: "",
-    acquiredDate: "",
-    lastWatered: "",
+    name: '',
+    nickname: '',
+    species: '',
+    location: '',
     wateringFrequency: 7,
-    lastFertilized: "",
     fertilizingFrequency: 30,
-    location: "",
-    notes: "",
-    healthStatus: "healthy"
+    lastWatered: new Date().toISOString().split('T')[0],
+    lastFertilized: new Date().toISOString().split('T')[0]
   });
-  
-  // Current view
-  const [activeView, setActiveView] = useState('grid');
-  
-  //Attribute
-  // Format date for display
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    const fetchPlants = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('http://localhost:3000/api/v1/tracker', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const validPlants = res.data.filter(p => p && typeof p === 'object');
+        setMyPlants(validPlants);
+      } catch (err) {
+        console.error('Error fetching plants:', err);
+      }
+    };
+    if (isAuthenticated) fetchPlants();
+  }, [isAuthenticated]);
+
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-  
-  // Calculate days since last watered
-  const getDaysSinceWatered = (lastWateredDate) => {
+
+  const getDaysSince = (date) => {
+    if (!date) return 0;
     const today = new Date();
-    const lastWatered = new Date(lastWateredDate);
-    const diffTime = today - lastWatered;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const past = new Date(date);
+    return Math.ceil((today - past) / (1000 * 60 * 60 * 24));
   };
-  
-  // Calculate if watering is needed
+
   const needsWatering = (plant) => {
-    const daysSinceWatered = getDaysSinceWatered(plant.lastWatered);
-    //Watering frequency is within the attributes of the plant inserted
-    return daysSinceWatered >= plant.wateringFrequency;
+    if (!plant || !plant.lastWatered) return false;
+    return getDaysSince(plant.lastWatered) >= (plant.wateringFrequency || 7);
   };
-  
-  // Calculate days since last fertilized
-  const getDaysSinceFertilized = (lastFertilizedDate) => {
-    const today = new Date();
-    const lastFertilized = new Date(lastFertilizedDate);
-    const diffTime = today - lastFertilized;
-    //Fertilization frequency is within the attributes of the plant inserted
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-  
-  // Calculate if fertilizing is needed
+
   const needsFertilizing = (plant) => {
-    const daysSinceFertilized = getDaysSinceFertilized(plant.lastFertilized);
-    return daysSinceFertilized >= plant.fertilizingFrequency;
+    if (!plant || !plant.lastFertilized) return false;
+    return getDaysSince(plant.lastFertilized) >= (plant.fertilizingFrequency || 30);
   };
-  
-  // Handle new plant form input changes
-  //Append it to the pre-existing state instead of performing a new fetch
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewPlant(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+  const updatePlant = async (plantId, data) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await axios.put(`http://localhost:3000/api/v1/tracker/${plantId}`, data, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMyPlants(prevPlants => 
+        prevPlants.map(p => p && p._id === plantId ? res.data : p)
+      );
+    } catch (err) {
+      console.error("Error updating plant:", err);
+      alert('Failed to update plant. Please try again.');
+    }
   };
-  
-  // Add new plant
-  const handleAddPlant = (e) => {
+
+  const logWatering = async (id) => {
+    const confirmed = window.confirm('Mark this plant as watered?');
+    if (confirmed) {
+      await updatePlant(id, { lastWatered: new Date().toISOString().split('T')[0] });
+    }
+  };
+
+  const logFertilizing = async (id) => {
+    const confirmed = window.confirm('Mark this plant as fertilized?');
+    if (confirmed) {
+      await updatePlant(id, { lastFertilized: new Date().toISOString().split('T')[0] });
+    }
+  };
+
+  const handleEditClick = (plant) => {
+    setEditingPlant({ ...plant });
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async (e) => {
     e.preventDefault();
+    if (!editingPlant || !editingPlant._id) return;
     
-    const plantToAdd = {
-      id: myPlants.length + 1,
-      ...newPlant,
-      image: "/images/default-plant.jpg" // Default image
-    };
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Create update object with all fields
+      const updateData = {
+        name: editingPlant.name,
+        nickname: editingPlant.nickname,
+        species: editingPlant.species,
+        location: editingPlant.location,
+        wateringFrequency: parseInt(editingPlant.wateringFrequency) || 7,
+        fertilizingFrequency: parseInt(editingPlant.fertilizingFrequency) || 30,
+        lastWatered: editingPlant.lastWatered,
+        lastFertilized: editingPlant.lastFertilized
+      };
+
+      const res = await axios.put(
+        `http://localhost:3000/api/v1/tracker/${editingPlant._id}`, 
+        updateData, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Update the local state with the response from the server
+      setMyPlants(prevPlants =>
+        prevPlants.map(p => p._id === editingPlant._id ? res.data : p)
+      );
+      
+      setShowEditModal(false);
+      setEditingPlant(null);
+      
+      // Optional: Show success message
+      alert('Plant updated successfully!');
+    } catch (err) {
+      console.error("Error updating plant:", err);
+      alert('Failed to update plant. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddPlant = async (e) => {
+    e.preventDefault();
+    setLoading(true);
     
-    //Tony from Jad: These are all the required attributes of the plants
-    setMyPlants([...myPlants, plantToAdd]);
-    setIsAddPlantModalOpen(false);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post('http://localhost:3000/api/v1/tracker', newPlant, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMyPlants(prevPlants => [...prevPlants, res.data]);
+      setShowAddModal(false);
+      
+      // Reset form
+      setNewPlant({
+        name: '',
+        nickname: '',
+        species: '',
+        location: '',
+        wateringFrequency: 7,
+        fertilizingFrequency: 30,
+        lastWatered: new Date().toISOString().split('T')[0],
+        lastFertilized: new Date().toISOString().split('T')[0]
+      });
+    } catch (err) {
+      console.error("Error adding plant:", err);
+      alert('Failed to add plant. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingPlant(null);
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddModal(false);
     setNewPlant({
-      name: "",
-      nickname: "",
-      acquiredDate: "",
-      lastWatered: "",
+      name: '',
+      nickname: '',
+      species: '',
+      location: '',
       wateringFrequency: 7,
-      lastFertilized: "",
       fertilizingFrequency: 30,
-      location: "",
-      notes: "",
-      healthStatus: "healthy"
+      lastWatered: new Date().toISOString().split('T')[0],
+      lastFertilized: new Date().toISOString().split('T')[0]
     });
   };
-  
-  // Log watering for a plant
-  const logWatering = (plantId) => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    setMyPlants(myPlants.map(plant => 
-      plant.id === plantId 
-        ? { ...plant, lastWatered: today } 
-        : plant
-    ));
-  };
-  
-  // Log fertilizing for a plant
-  const logFertilizing = (plantId) => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    setMyPlants(myPlants.map(plant => 
-      plant.id === plantId 
-        ? { ...plant, lastFertilized: today } 
-        : plant
-    ));
-  };
-  
-  // Calculate watering status for all plants
-  const calculateWateringStatus = () => {
-    let needsWateringCount = 0;
-    let upcomingCount = 0;
-    
-    myPlants.forEach(plant => {
-      const daysSinceWatered = getDaysSinceWatered(plant.lastWatered);
-      if (daysSinceWatered >= plant.wateringFrequency) {
-        needsWateringCount++;
-      } else if (daysSinceWatered >= plant.wateringFrequency - 2) {
-        upcomingCount++;
-      }
-    });
-    
-    return { needsWateringCount, upcomingCount };
-  };
-  
-  const wateringStatus = calculateWateringStatus();
-  
+
+  // Stats
+  const total = myPlants.length;
+  const watering = myPlants.filter(plant => plant && needsWatering(plant)).length;
+  const upcoming = 0;
+
   return (
     <div className="tracker-page">
-      <div className="tracker-header">
-        <div className="container">
-          <h1>Plant Tracker</h1>
-          <p>Keep track of your plants' care schedule and growth progress.</p>
-          
-          <div className="tracker-stats">
-            <div className="stat-card">
-              <div className="stat-value">{myPlants.length}</div>
-              <div className="stat-label">Total Plants</div>
-            </div>
-            <div className="stat-card highlight">
-              <div className="stat-value">{wateringStatus.needsWateringCount}</div>
-              <div className="stat-label">Need Watering</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{wateringStatus.upcomingCount}</div>
-              <div className="stat-label">Upcoming</div>
-            </div>
-          </div>
+      {/* STATS ROW */}
+      <div className="tracker-stats">
+        <div className="stat-card">
+          <div className="stat-icon">🌿</div>
+          <div className="stat-value">{total}</div>
+          <div className="stat-label">Total Plants</div>
+        </div>
+        <div className="stat-card highlight">
+          <div className="stat-icon">💧</div>
+          <div className="stat-value">{watering}</div>
+          <div className="stat-label">Need Watering</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">⏰</div>
+          <div className="stat-value">{upcoming}</div>
+          <div className="stat-label">Upcoming</div>
         </div>
       </div>
-      
-      <div className="tracker-content container">
-        <div className="tracker-controls">
-          <div className="view-controls">
-            <button 
-              className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
-              onClick={() => setActiveView('grid')}
-            >
-              Grid View
-            </button>
-            <button 
-              className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
-              onClick={() => setActiveView('list')}
-            >
-              List View
-            </button>
-            <button 
-              className={`view-btn ${activeView === 'calendar' ? 'active' : ''}`}
-              onClick={() => setActiveView('calendar')}
-            >
-              Calendar
-            </button>
-          </div>
-          
-          <button 
-            className="add-plant-btn"
-            onClick={() => setIsAddPlantModalOpen(true)}
-          >
-            Add Plant
-          </button>
-        </div>
-        
-        {/* Grid View */}
-        {activeView === 'grid' && (
-          <div className="plants-grid">
-            {myPlants.map(plant => (
-              <div className={`plant-card ${needsWatering(plant) ? 'needs-water' : ''}`} key={plant.id}>
-                <div className="plant-image-placeholder">
-                  <div className="plant-icon">🪴</div>
-                  {needsWatering(plant) && <div className="water-indicator">💧</div>}
-                  {needsFertilizing(plant) && <div className="fertilize-indicator">🌱</div>}
-                </div>
-                <div className="plant-info">
-                  <h3 className="plant-name">{plant.name}</h3>
-                  {plant.nickname && <p className="plant-nickname">"{plant.nickname}"</p>}
-                  
-                  <div className="care-info">
-                    <div className="care-item">
-                      <span className="care-label">Last Watered:</span>
-                      <span className="care-value">{formatDate(plant.lastWatered)}</span>
-                      <span className="days-ago">
-                        ({getDaysSinceWatered(plant.lastWatered)} days ago)
-                      </span>
-                    </div>
-                    <div className="care-item">
-                      <span className="care-label">Last Fertilized:</span>
-                      <span className="care-value">{formatDate(plant.lastFertilized)}</span>
-                      <span className="days-ago">
-                        ({getDaysSinceFertilized(plant.lastFertilized)} days ago)
-                      </span>
-                    </div>
-                    <div className="care-item">
-                      <span className="care-label">Location:</span>
-                      <span className="care-value">{plant.location}</span>
-                    </div>
-                  </div>
-                  
-                  {plant.notes && (
-                    <div className="plant-notes">
-                      <p>{plant.notes}</p>
-                    </div>
-                  )}
-                  
-                  <div className="care-actions">
-                    <button 
-                      className="water-btn"
-                      onClick={() => logWatering(plant.id)}
-                    >
-                      Log Watering
-                    </button>
-                    <button 
-                      className="fertilize-btn"
-                      onClick={() => logFertilizing(plant.id)}
-                    >
-                      Log Fertilizing
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {/* List View */}
-        {activeView === 'list' && (
-          <div className="plants-list">
-            <div className="list-header">
-              <div className="col-plant">Plant</div>
-              <div className="col-location">Location</div>
-              <div className="col-watering">Last Watered</div>
-              <div className="col-fertilizing">Last Fertilized</div>
-              <div className="col-actions">Actions</div>
-            </div>
-            
-            {myPlants.map(plant => (
-              <div 
-                className={`list-item ${needsWatering(plant) ? 'needs-water' : ''}`} 
-                key={plant.id}
-              >
-                <div className="col-plant">
-                  <div className="list-plant-info">
-                    <div className="list-plant-image">
-                      <div className="plant-icon-small">🪴</div>
-                    </div>
-                    <div>
-                      <div className="list-plant-name">{plant.name}</div>
-                      {plant.nickname && <div className="list-plant-nickname">"{plant.nickname}"</div>}
-                    </div>
-                  </div>
-                </div>
-                <div className="col-location">{plant.location}</div>
-                <div className="col-watering">
-                  <div>{formatDate(plant.lastWatered)}</div>
-                  <div className="days-ago">({getDaysSinceWatered(plant.lastWatered)} days ago)</div>
-                  {needsWatering(plant) && <div className="water-indicator-small">💧</div>}
-                </div>
-                <div className="col-fertilizing">
-                  <div>{formatDate(plant.lastFertilized)}</div>
-                  <div className="days-ago">({getDaysSinceFertilized(plant.lastFertilized)} days ago)</div>
-                  {needsFertilizing(plant) && <div className="fertilize-indicator-small">🌱</div>}
-                </div>
-                <div className="col-actions">
-                  <button 
-                    className="list-water-btn"
-                    onClick={() => logWatering(plant.id)}
-                  >
-                    Water
-                  </button>
-                  <button 
-                    className="list-fertilize-btn"
-                    onClick={() => logFertilizing(plant.id)}
-                  >
-                    Fertilize
-                  </button>
-                  <button className="list-edit-btn">Edit</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Calendar View - Simplified version */}
-        {activeView === 'calendar' && (
-          <div className="calendar-view">
-            <div className="calendar-message">
-              <h3>Calendar View</h3>
-              <p>The calendar view would display a monthly calendar with icons indicating which days plants need to be watered or fertilized.</p>
-              <p>This would be implemented with a calendar component library like react-calendar or react-big-calendar.</p>
-            </div>
-          </div>
-        )}
+
+      {/* LIST VIEW */}
+      <div className="plants-table-wrapper">
+        <table className="plants-table">
+          <thead>
+            <tr>
+              <th>Plant</th>
+              <th>Location</th>
+              <th>Last Watered</th>
+              <th>Last Fertilized</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {myPlants.map((plant) => {
+              if (!plant || !plant._id) return null;
+              
+              const wateredAgo = plant.lastWatered ? getDaysSince(plant.lastWatered) : null;
+              const fertilizedAgo = plant.lastFertilized ? getDaysSince(plant.lastFertilized) : null;
+
+              return (
+                <tr key={plant._id} className={needsWatering(plant) ? 'highlight-row' : ''}>
+                  <td>
+                    <strong>{plant.name || 'Unnamed Plant'}</strong>
+                    {plant.nickname && <div className="nickname">"{plant.nickname}"</div>}
+                  </td>
+                  <td>{plant.location || 'Unknown'}</td>
+                  <td>
+                    {formatDate(plant.lastWatered)}
+                    {wateredAgo !== null && <div className="days-ago">({wateredAgo} days ago)</div>}
+                    {needsWatering(plant) && <span className="badge water">💧</span>}
+                  </td>
+                  <td>
+                    {formatDate(plant.lastFertilized)}
+                    {fertilizedAgo !== null && <div className="days-ago">({fertilizedAgo} days ago)</div>}
+                    {needsFertilizing(plant) && <span className="badge fertilizer">🌱</span>}
+                  </td>
+                  <td>
+                    <button className="btn water" onClick={() => logWatering(plant._id)}>Water</button>
+                    <button className="btn fertilize" onClick={() => logFertilizing(plant._id)}>Fertilize</button>
+                    <button className="btn edit" onClick={() => handleEditClick(plant)}>Edit</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-      
+
       {/* Add Plant Modal */}
-      {isAddPlantModalOpen && (
+      {showAddModal && (
         <div className="modal-overlay">
-          <div className="add-plant-modal">
-            <div className="modal-header">
-              <h2>Add New Plant</h2>
-              <button 
-                className="close-modal-btn"
-                onClick={() => setIsAddPlantModalOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            
+          <div className="modal">
+            <h2>Add New Plant</h2>
             <form onSubmit={handleAddPlant}>
               <div className="form-group">
-                <label htmlFor="name">Plant Name*</label>
-                <input 
+                <label>Plant Name</label>
+                <input
                   type="text"
-                  id="name"
-                  name="name"
                   value={newPlant.name}
-                  onChange={handleInputChange}
+                  onChange={(e) => setNewPlant({...newPlant, name: e.target.value})}
                   required
                 />
               </div>
-              
               <div className="form-group">
-                <label htmlFor="nickname">Nickname</label>
-                <input 
+                <label>Nickname</label>
+                <input
                   type="text"
-                  id="nickname"
-                  name="nickname"
                   value={newPlant.nickname}
-                  onChange={handleInputChange}
+                  onChange={(e) => setNewPlant({...newPlant, nickname: e.target.value})}
                 />
               </div>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="acquiredDate">Date Acquired</label>
-                  <input 
-                    type="date"
-                    id="acquiredDate"
-                    name="acquiredDate"
-                    value={newPlant.acquiredDate}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="location">Location</label>
-                  <input 
-                    type="text"
-                    id="location"
-                    name="location"
-                    value={newPlant.location}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="lastWatered">Last Watered*</label>
-                  <input 
-                    type="date"
-                    id="lastWatered"
-                    name="lastWatered"
-                    value={newPlant.lastWatered}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="wateringFrequency">Watering Frequency (days)*</label>
-                  <input 
-                    type="number"
-                    id="wateringFrequency"
-                    name="wateringFrequency"
-                    min="1"
-                    value={newPlant.wateringFrequency}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="lastFertilized">Last Fertilized</label>
-                  <input 
-                    type="date"
-                    id="lastFertilized"
-                    name="lastFertilized"
-                    value={newPlant.lastFertilized}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="fertilizingFrequency">Fertilizing Frequency (days)</label>
-                  <input 
-                    type="number"
-                    id="fertilizingFrequency"
-                    name="fertilizingFrequency"
-                    min="1"
-                    value={newPlant.fertilizingFrequency}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              
               <div className="form-group">
-                <label htmlFor="notes">Notes</label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  rows="3"
-                  value={newPlant.notes}
-                  onChange={handleInputChange}
-                ></textarea>
+                <label>Species</label>
+                <input
+                  type="text"
+                  value={newPlant.species}
+                  onChange={(e) => setNewPlant({...newPlant, species: e.target.value})}
+                />
               </div>
-              
               <div className="form-group">
-                <label htmlFor="healthStatus">Health Status</label>
-                <select
-                  id="healthStatus"
-                  name="healthStatus"
-                  value={newPlant.healthStatus}
-                  onChange={handleInputChange}
-                >
-                  <option value="healthy">Healthy</option>
-                  <option value="needsAttention">Needs Attention</option>
-                  <option value="declining">Declining</option>
-                </select>
+                <label>Location</label>
+                <input
+                  type="text"
+                  value={newPlant.location}
+                  onChange={(e) => setNewPlant({...newPlant, location: e.target.value})}
+                  required
+                />
               </div>
-              
-              <div className="form-actions">
+              <div className="form-group">
+                <label>Watering Frequency (days)</label>
+                <input
+                  type="number"
+                  value={newPlant.wateringFrequency}
+                  onChange={(e) => setNewPlant({...newPlant, wateringFrequency: parseInt(e.target.value) || 7})}
+                  required
+                  min="1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Fertilizing Frequency (days)</label>
+                <input
+                  type="number"
+                  value={newPlant.fertilizingFrequency}
+                  onChange={(e) => setNewPlant({...newPlant, fertilizingFrequency: parseInt(e.target.value) || 30})}
+                  required
+                  min="1"
+                />
+              </div>
+              <div className="modal-actions">
                 <button 
                   type="button" 
-                  className="cancel-btn"
-                  onClick={() => setIsAddPlantModalOpen(false)}
+                  className="btn cancel" 
+                  onClick={handleCancelAdd}
+                  disabled={loading}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="submit-btn">Add Plant</button>
+                <button 
+                  type="submit" 
+                  className="btn save"
+                  disabled={loading}
+                >
+                  {loading ? 'Adding...' : 'Add Plant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Plant Modal */}
+       {/* Edit Plant Modal */}
+      {showEditModal && editingPlant && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Edit Plant</h2>
+            <form onSubmit={handleEditSave}>
+              <div className="form-group">
+                <label>Plant Name</label>
+                <input
+                  type="text"
+                  value={editingPlant.name || ''}
+                  onChange={(e) => setEditingPlant({...editingPlant, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Nickname</label>
+                <input
+                  type="text"
+                  value={editingPlant.nickname || ''}
+                  onChange={(e) => setEditingPlant({...editingPlant, nickname: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Species</label>
+                <input
+                  type="text"
+                  value={editingPlant.species || ''}
+                  onChange={(e) => setEditingPlant({...editingPlant, species: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Location</label>
+                <input
+                  type="text"
+                  value={editingPlant.location || ''}
+                  onChange={(e) => setEditingPlant({...editingPlant, location: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Watering Frequency (days)</label>
+                <input
+                  type="number"
+                  value={editingPlant.wateringFrequency || 7}
+                  onChange={(e) => setEditingPlant({...editingPlant, wateringFrequency: parseInt(e.target.value) || 7})}
+                  required
+                  min="1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Fertilizing Frequency (days)</label>
+                <input
+                  type="number"
+                  value={editingPlant.fertilizingFrequency || 30}
+                  onChange={(e) => setEditingPlant({...editingPlant, fertilizingFrequency: parseInt(e.target.value) || 30})}
+                  required
+                  min="1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Last Watered</label>
+                <input
+                  type="date"
+                  value={editingPlant.lastWatered ? editingPlant.lastWatered.split('T')[0] : ''}
+                  onChange={(e) => setEditingPlant({...editingPlant, lastWatered: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Last Fertilized</label>
+                <input
+                  type="date"
+                  value={editingPlant.lastFertilized ? editingPlant.lastFertilized.split('T')[0] : ''}
+                  onChange={(e) => setEditingPlant({...editingPlant, lastFertilized: e.target.value})}
+                />
+              </div>
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn cancel" 
+                  onClick={handleCancelEdit}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn save"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
             </form>
           </div>
