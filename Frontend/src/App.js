@@ -338,7 +338,6 @@ const AppRoutes = () => {
       
       {/* AI route */}
       <Route path="/ai" element={<AI />} />
-    </Routes>
       {/* Footer component - available on all pages except auth */}
       <Routes>
         <Route path="/login" element={null} />
