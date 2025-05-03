@@ -9,6 +9,7 @@
 // import { WishlistProvider } from './WishlistContext';
 // import { AuthProvider, useAuth } from './components/Auth/AuthContext';
 
+
 // import CartSidebar from './CartSidebar';
 // import WishlistSidebar from './WishlistSidebar';
 // import Login from './components/Auth/Login';
@@ -179,6 +180,7 @@ import PlantChatbot from './components/PlantChatbot/PlantChatbot';
 import { CartProvider } from './CartContext';
 import { WishlistProvider } from './WishlistContext';
 import { AuthProvider } from './components/Auth/AuthContext';
+import Footer from './components/Footer/Footer'; // Import the Footer component
 
 import CartSidebar from './CartSidebar';
 import WishlistSidebar from './WishlistSidebar';
@@ -337,6 +339,14 @@ const AppRoutes = () => {
       {/* AI route */}
       <Route path="/ai" element={<AI />} />
     </Routes>
+      {/* Footer component - available on all pages except auth */}
+      <Routes>
+        <Route path="/login" element={null} />
+        <Route path="/signup" element={null} />
+        <Route path="*" element={<Footer darkMode={darkMode} />
+} />
+      </Routes>
+
   );
 };
 
