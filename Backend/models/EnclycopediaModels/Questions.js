@@ -26,12 +26,14 @@ const questionsSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+      default: null, // Optional, just for clarity
       validate: {
         validator: function (v) {
-          return /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/.test(v);
+          // Allow null or valid image URLs
+          return v === null || /^https?:\/\/.+\.(jpg|jpeg|png|webp|avif|gif|svg)$/i.test(v);
         },
         message: props => `${props.value} is not a valid image URL!`
-      },
+      }
     },
     replies: [
       {
