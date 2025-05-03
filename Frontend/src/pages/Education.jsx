@@ -60,49 +60,25 @@ const Education = () => {
 
 
   const fetchPlantsData = async () => {
-    try {
-      const response = await fetch(`${baseUrl}/education/plants`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Plants fetched successfully:", data);
-        setPlantsData(data);
-        return data;
-      } else {
-        console.error("Failed to fetch plants:", response.status);
-      }
-    } catch (error) {
-      console.error("Error fetching plants data:", error);
-      // If we can't fetch plants, use the dummy data
-      setPlantsData(plantsDataDummyArray);
-    }
-    return [];
+    console.log("Using dummy plants data");
+    // Add _id field to each plant for compatibility
+    const plantsWithIds = plantsDataDummyArray.map((plant, index) => ({
+      ...plant,
+      _id: plant._id || `p${index + 1}`
+    }));
+    setPlantsData(plantsWithIds);
+    return plantsWithIds;
   };
 
   const fetchGuidesData = async () => {
-    try {
-      const response = await fetch(`${baseUrl}/education/guides`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Guides fetched successfully:", data);
-        setGuidesData(data);
-        return data;
-      } else {
-        console.error("Failed to fetch guides:", response.status);
-      }
-    } catch (error) {
-      console.error("Error fetching guides data:", error);
-      // If we can't fetch guides, use the dummy data
-      setGuidesData(guidesDataDummyArray);
-    }
-    return [];
+    console.log("Using dummy guides data");
+    // Add _id field to each guide for compatibility
+    const guidesWithIds = guidesDataDummyArray.map(guide => ({
+      ...guide,
+      _id: guide.id
+    }));
+    setGuidesData(guidesWithIds);
+    return guidesWithIds;
   };
 
   const fetchQuestionsData = async () => {
@@ -234,7 +210,7 @@ const Education = () => {
       id: 1,
       title: "How to Propagate Houseplants",
       category: "propagation",
-      image: "/images/propagation-guide.jpg", // Keep original path
+      image: monsteraImage, // Using imported image instead of path
       difficulty: "beginner",
       timeRequired: "15-30 minutes",
       tools: ["Clean scissors or pruning shears", "Containers for water propagation", "Potting soil", "Small pots"],
@@ -253,7 +229,7 @@ const Education = () => {
       id: 2,
       title: "When and How to Repot Plants",
       category: "maintenance",
-      image: "/images/repotting-guide.jpg", // Keep original path
+      image: pothosImage, // Using imported image instead of path
       difficulty: "beginner",
       timeRequired: "30-60 minutes",
       tools: ["New pot (1-2 inches larger in diameter)", "Fresh potting mix", "Trowel", "Scissors", "Watering can"],
@@ -272,7 +248,7 @@ const Education = () => {
       id: 3,
       title: "Dealing with Common Houseplant Pests",
       category: "pest-control",
-      image: "/images/pest-guide.jpg", // Keep original path
+      image: fiddleLeafImage, // Using imported image instead of path
       difficulty: "intermediate",
       timeRequired: "Varies",
       tools: ["Spray bottle", "Neem oil", "Insecticidal soap", "Cotton swabs", "Sticky traps"],
@@ -627,91 +603,97 @@ const Education = () => {
 
       <div className="education-content container">
         {/* Plant Encyclopedia Section */}
-        <section className="encyclopedia-section">
-          <div className="section-header">
-            <h2>Plant Encyclopedia</h2>
-            <p>Discover detailed information about a wide variety of houseplants.</p>
-          </div>
+        <section>
+      <div className="section-header">
+        <h2>Plant Encyclopedia</h2>
+        <p>Discover detailed information about a wide variety of houseplants.</p>
+      </div>
 
-          <div className="category-filters">
-            <button
-              className={`category-button ${activeCategory === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveCategory('all')}
-            >
-              All Plants
-            </button>
-            <button
-              className={`category-button ${activeCategory === 'foliage' ? 'active' : ''}`}
-              onClick={() => setActiveCategory('foliage')}
-            >
-              Foliage Plants
-            </button>
-            <button
-              className={`category-button ${activeCategory === 'succulent' ? 'active' : ''}`}
-              onClick={() => setActiveCategory('succulent')}
-            >
-              Succulents & Cacti
-            </button>
-            <button
-              className={`category-button ${activeCategory === 'vine' ? 'active' : ''}`}
-              onClick={() => setActiveCategory('vine')}
-            >
-              Climbing & Trailing
-            </button>
-            <button
-              className={`category-button ${activeCategory === 'flowering' ? 'active' : ''}`}
-              onClick={() => setActiveCategory('flowering')}
-            >
-              Flowering Plants
-            </button>
-          </div>
-          <div className="plants-grid">
-            {filteredPlants.length > 0 ? (
-              filteredPlants.map(plant => (
-                <div className="plant-card" key={plant._id}>
-                  <div className="plant-image-container">
-                    <img
-                      src={plant.image || "https://via.placeholder.com/300x200?text=Plant+Image"}
-                      alt={plant.name}
-                      className="plant-image"
-                      onError={handleImageError}
-                    />
+      <div className="category-filters">
+        <button
+          className={`category-button ${activeCategory === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('all')}
+        >
+          All Plants
+        </button>
+        <button
+          className={`category-button ${activeCategory === 'foliage' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('foliage')}
+        >
+          Foliage Plants
+        </button>
+        <button
+          className={`category-button ${activeCategory === 'succulent' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('succulent')}
+        >
+          Succulents & Cacti
+        </button>
+        <button
+          className={`category-button ${activeCategory === 'vine' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('vine')}
+        >
+          Climbing & Trailing
+        </button>
+        <button
+          className={`category-button ${activeCategory === 'flowering' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('flowering')}
+        >
+          Flowering Plants
+        </button>
+      </div>
+
+      <div className="plants-grid">
+        {filteredPlants.length > 0 ? (
+          filteredPlants.map(plant => (
+            <div className="plant-card" key={plant._id}>
+              <div className="plant-image-container">
+                <img
+                  src={plant.image || "https://via.placeholder.com/300x200?text=Plant+Image"}
+                  alt={plant.name}
+                  className="plant-image"
+                  onError={handleImageError}
+                />
+              </div>
+              <div className="plant-info">
+                <h3 className="plant-name">{plant.name}</h3>
+                <p className="plant-common-name">{plant.commonName || "Common Name Not Available"}</p>
+
+                <div className="plant-care-icons">
+                  <div className="care-item" title="Light Requirements">
+                    <span className="care-icon">☀</span>
+                    <span className="care-label">Light:</span>
+                    <span className="care-value">{plant.light}</span>
                   </div>
-                  <div className="plant-info">
-                    <h3 className="plant-name">{plant.name}</h3>
-                    <p className="plant-common-name">{plant.commercialName || "Common Name Not Available"}</p>
-
-                    <div className="plant-care-icons">
-                      <div className="care-item" title="Light Requirements">
-                        <span className="care-icon">☀</span>
-                        <span className="care-label">Light:</span>
-                        <span className="care-value">{plant.light}</span>
-                      </div>
-                      <div className="care-item" title="Water Requirements">
-                        <span className="care-icon">💧</span>
-                        <span className="care-label">Water:</span>
-                        <span className="care-value">{plant.water && plant.water.includes('dry') ? 'Low' : 'Moderate'}</span>
-                      </div>
-                      <div className="care-item" title="Difficulty Level">
-                        <span className="care-icon">🌱</span>
-                        <span className="care-label">Care:</span>
-                        <span className="care-value">{plant.difficulty}</span>
-                      </div>
-                    </div>
-
-                    <p className="plant-description">{plant.description && plant.description.substring(0, 100)}...</p>
-
-                    <button className="view-details-btn">View Details</button>
+                  <div className="care-item" title="Water Requirements">
+                    <span className="care-icon">💧</span>
+                    <span className="care-label">Water:</span>
+                    <span className="care-value">{plant.water && plant.water.includes('dry') ? 'Low' : 'Moderate'}</span>
+                  </div>
+                  <div className="care-item" title="Difficulty Level">
+                    <span className="care-icon">🌱</span>
+                    <span className="care-label">Care:</span>
+                    <span className="care-value">{plant.difficulty}</span>
+                  </div>
+                  <div className="care-item" title="Toxicity">
+                    <span className="care-icon">⚠️</span>
+                    <span className="care-label">Toxic:</span>
+                    <span className="care-value">{plant.toxic || 'No'}</span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-results">
-                <p>No plants found matching your search criteria.</p>
+
+                <p className="plant-description">{plant.description ? `${plant.description.substring(0, 100)}...` : "No description available"}</p>
+
+                <button className="view-details-btn">View Details</button>
               </div>
-            )}
+            </div>
+          ))
+        ) : (
+          <div className="no-results">
+            <p>No plants found matching your search criteria.</p>
           </div>
-        </section>
+        )}
+      </div>
+    </section>
 
         {/* How-To Guides Section */}
         <section className="guides-section">

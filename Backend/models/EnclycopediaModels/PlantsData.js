@@ -16,10 +16,16 @@ const plantsDataSchema = new mongoose.Schema(
         required: true,
         enum: ['foliage', 'flowering', 'succulent', 'cactus', 'herb', 'tree', 'vine', 'fern'], // Example categories
     },
-    image: { 
-        type: String, 
-        required: false 
-    },//Im keeping this required for better view and UI.
+    image: {
+        type: String,
+        validate: {
+          validator: function (v) {
+            return v === null || typeof v === 'string';
+          },
+          message: props => `${props.value} is not a valid image URL`
+        },
+        required: false
+      },
     light: { 
         type: String, 
         required: true,
