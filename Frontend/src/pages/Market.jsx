@@ -1,268 +1,747 @@
-// Market.jsx 
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect,useRef } from 'react';
+
+import axios from 'axios';
+
 import './Market.css';
 import { useCart } from '../CartContext';
-import { useWishlist } from '../WishlistContext'; // Import useWishlist
+import { useWishlist } from '../WishlistContext';
+import { useAuth } from '../components/Auth/AuthContext';
 import ProductQuickView from '../components/ProductQuickView/ProductQuickView';
+import ProductRating from '../components/ProductRating/ProductRating';
 import ClipLoader from 'react-spinners/ClipLoader';
+
+// Consistent API base URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 const Market = () => {
   // State for products and filters
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [minRatingFilter, setMinRatingFilter] = useState(0);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 100]);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(1000);
+  const [isEditingMinPrice, setIsEditingMinPrice] = useState(false);
+  const [isEditingMaxPrice, setIsEditingMaxPrice] = useState(false);
+  const [minPriceInput, setMinPriceInput] = useState("0");
+  const [maxPriceInput, setMaxPriceInput] = useState("1000");  const [searchQuery, setSearchQuery] = useState('');
+  const [inStock, setInStock] = useState(false);
+
   const [sortBy, setSortBy] = useState('featured');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    category: '',
+    price: '',
+    description: '',
+    stock: '',
+    image: null,
+    imageFile: null
+  });
   
   // State for quick view
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   // Get cart context
-  const { addToCart } = useCart();
+  const Cart = useCart();
   
   // Get wishlist context
   const { toggleWishlistItem, isInWishlist } = useWishlist();
+  
+  // Get auth context
+  const { isAuthenticated, requireAuth, registerCallback } = useAuth();
 
-  // Mock product data for testing
-  const mockProducts = [
-    {
-      id: 101,
-      name: "Monstera Deliciosa",
-      category: "indoor",
-      price: 45.99,
-      description: "The Monstera Deliciosa, or Swiss Cheese Plant, is known for its stunning split leaves. This popular houseplant is easy to care for and makes a dramatic statement in any space with its large, glossy foliage.",
-      image: "/images/plant1.jpg",
-      rating: 4.8,
-      stock: 15,
-      badge: "Popular",
-      tags: ["air purifying", "low light"]
-    },
-    {
-      id: 102,
-      name: "Snake Plant",
-      category: "indoor",
-      price: 29.99,
-      description: "One of the most carefree houseplants you can grow, the Snake Plant (Sansevieria) thrives on neglect. Its striking upright leaves with yellow edges purify air and can survive in low light conditions, making it perfect for beginners.",
-      image: "/images/plant2.jpg",
-      rating: 4.9,
-      stock: 20,
-      badge: "Best Seller",
-      tags: ["air purifying", "drought tolerant"]
-    },
-    {
-      id: 103,
-      name: "Fiddle Leaf Fig",
-      category: "indoor",
-      price: 59.99,
-      description: "The Fiddle Leaf Fig (Ficus lyrata) is famous for its large, violin-shaped leaves and elegant appearance. This stunning statement plant thrives in bright, indirect light and adds a touch of sophistication to any interior space.",
-      image: "/images/plant3.jpg",
-      rating: 4.5,
-      stock: 8,
-      badge: null,
-      tags: ["bright light", "statement"]
-    },
-    {
-      id: 104,
-      name: "Lavender",
-      category: "outdoor",
-      price: 19.99,
-      description: "Lavender is a versatile, aromatic herb beloved for its calming fragrance and beautiful purple blooms. Drought-tolerant and sun-loving, it's perfect for gardens, containers, and even indoors with sufficient light.",
-      image: "/images/plant4.jpg",
-      rating: 4.7,
-      stock: 25,
-      badge: "New",
-      tags: ["fragrant", "drought tolerant"]
-    },
-    {
-      id: 105,
-      name: "String of Pearls",
-      category: "hanging",
-      price: 24.99,
-      description: "The String of Pearls (Senecio rowleyanus) features unique round bead-like leaves that cascade down its stems, creating a stunning hanging display. This drought-tolerant succulent requires minimal water and makes a perfect hanging plant for any home.",
-      image: "/images/plant5.jpg",
-      rating: 4.6,
-      stock: 12,
-      badge: null,
-      tags: ["succulent", "trailing"]
-    },
-    {
-      id: 106,
-      name: "ZZ Plant",
-      category: "indoor",
-      price: 34.99,
-      description: "The ZZ Plant (Zamioculcas zamiifolia) is practically indestructible, thriving in low light and requiring minimal water. Its glossy, dark green leaves grow from thick rhizomes that store water, making it extremely drought-tolerant and perfect for beginners.",
-      image: "/images/plant6.jpg",
-      rating: 4.9,
-      stock: 18,
-      badge: "Low Maintenance",
-      tags: ["low light", "drought tolerant"]
-    },
-    {
-      id: 107,
-      name: "Terracotta Pot Set",
-      category: "accessories",
-      price: 39.99,
-      description: "This set of 3 terracotta pots in various sizes is perfect for your houseplant collection. These classic clay pots provide excellent drainage and airflow for plant roots, promoting healthy growth.",
-      image: "/images/accessory1.jpg",
-      rating: 4.8,
-      stock: 20,
-      badge: "Value Pack",
-      tags: ["pots", "accessories"]
-    },
-    {
-      id: 108,
-      name: "Premium Potting Soil",
-      category: "accessories",
-      price: 15.99,
-      description: "Our premium potting soil blend is specially formulated for indoor plants. Rich in organic matter and balanced nutrients, it provides the perfect growing medium for your houseplants.",
-      image: "/images/accessory2.jpg",
-      rating: 4.7,
-      stock: 50,
-      badge: null,
-      tags: ["soil", "accessories"]
+  // Pagination state
+const [currentPage, setCurrentPage] = useState(1);
+const [totalPages, setTotalPages] = useState(1);
+const [totalItems, setTotalItems] = useState(0);
+const [itemsPerPage, setItemsPerPage] = useState(12);
+const [loadingMore, setLoadingMore] = useState(false);
+
+// Last element reference for infinite scroll
+const lastProductRef = useRef(null);
+const observer = useRef(null);
+// Debounced search input (prevents making API calls for each keystroke)
+const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+const searchTimeoutRef = useRef(null);
+  
+
+
+// Modified useEffect to include inStock in dependencies
+useEffect(() => {
+  fetchProducts();
+}, [currentPage, activeCategory, minPrice, maxPrice, debouncedSearchQuery, minRatingFilter, sortBy, inStock]);
+
+// New function to debounce search input
+useEffect(() => {
+  if (searchTimeoutRef.current) {
+    clearTimeout(searchTimeoutRef.current);
+  }
+  
+  searchTimeoutRef.current = setTimeout(() => {
+    setDebouncedSearchQuery(searchQuery);
+    // Reset to first page when search query changes
+    setCurrentPage(1);
+  }, 500); // 500ms delay
+  
+  return () => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-  ];
+  };
+}, [searchQuery]);
 
-  // Initialize products and categories on component mount
-  useEffect(() => {
+// Intersection Observer for infinite scroll
+useEffect(() => {
+  if (loading || loadingMore || currentPage >= totalPages) return;
+  
+  const options = {
+    root: null,
+    rootMargin: '100px',
+    threshold: 0.05
+  };
+  
+  const handleObserver = (entries) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && currentPage < totalPages) {
+      loadMoreProducts();
+    }
+  };
+  
+  observer.current = new IntersectionObserver(handleObserver, options);
+  
+  if (lastProductRef.current) {
+    observer.current.observe(lastProductRef.current);
+  }
+  
+  return () => {
+    if (observer.current) {
+      observer.current.disconnect();
+    }
+  };
+}, [loading, loadingMore, currentPage, totalPages]);
+
+// New function to fetch products with server-side filtering and pagination
+const fetchProducts = async () => {
+  // setLoading(true);
+  // setError(null);
+
+
+   // For first page, show loading and clear existing products
+   if (currentPage === 1) {
     setLoading(true);
-    
-    // Simulating API fetch with setTimeout
-    setTimeout(() => {
-      try {
-        // Use mock data for now
-        setProducts(mockProducts);
-        setFilteredProducts(mockProducts);
-        
-        // Extract unique categories
-        const uniqueCategories = [...new Set(mockProducts.map(product => product.category))];
-        setCategories(uniqueCategories);
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setError(error.toString());
-        setLoading(false);
-      }
-    }, 1000);
-    
-    // In a real implementation, you would fetch from your API:
-    /*
-    axios
-      .get('http://localhost:3000/api/v1/market/public', { withCredentials: true })
-      .then(response => {
-        let productsData = response.data.products;
-        setProducts(productsData);
-        setFilteredProducts(productsData);
+    setProducts([]);
+    setFilteredProducts([]);
+  }
+  setError(null);
 
-        // Extract unique categories
-        const uniqueCategories = [...new Set(productsData.map(product => product.category))];
-        setCategories(uniqueCategories);
-        
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching products:', error);
-        setLoading(false);
-      });
-    */
-  }, []);
-
-  // Filter products when filters change
-  useEffect(() => {
-    let result = [...products];
+  try {
+    // Get authentication token if available
+    const token = localStorage.getItem('token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    // Filter by category
-    if (activeCategory !== 'all') {
-      result = result.filter(product => product.category === activeCategory);
+    // Build query parameters for server-side filtering
+    const params = new URLSearchParams();
+    params.append('page', currentPage);
+    params.append('limit', itemsPerPage);
+    
+    // Add filters
+    if (activeCategory && activeCategory !== 'all') {
+      params.append('category', activeCategory);
     }
     
-    // Filter by price range
-    result = result.filter(product => 
-      product.price >= priceRange[0] && product.price <= priceRange[1]
+    if (minPrice > 0) {
+      params.append('minPrice', minPrice);
+    }
+    
+    if (maxPrice) {
+      params.append('maxPrice', maxPrice);
+    }
+    
+    if (debouncedSearchQuery) {
+      params.append('search', debouncedSearchQuery);
+    }
+    
+    if (minRatingFilter > 0) {
+      params.append('minRating', minRatingFilter);
+    }
+    
+    if (sortBy && sortBy !== 'featured') {
+      params.append('sort', sortBy);
+    }
+
+    if (inStock === true) {
+      params.append('stock', 1);
+    }
+    console.log('In stock:', params.toString());
+    const response = await axios.get(
+      `${API_BASE_URL}/api/v1/market/public?${params.toString()}`, 
+      { 
+        withCredentials: true,
+        headers 
+      }
     );
     
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(product => 
-        product.name.toLowerCase().includes(query) || 
-        product.description.toLowerCase().includes(query)
-      );
+    const { products: fetchedProducts, pagination } = response.data;
+    
+    if (!fetchedProducts || fetchedProducts.length === 0) {
+      console.error('No products found in the response');
     }
     
-    // Sort products
-    switch(sortBy) {
-      case 'price-low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      default:
-        // 'featured' - no specific sorting
-        break;
-    }
+
     
-    setFilteredProducts(result);
-  }, [activeCategory, priceRange, searchQuery, sortBy, products]);
+    // For first page, replace products; for subsequent pages with infinite scroll, append
+    if (currentPage === 1) {
+      setProducts(fetchedProducts);
+      setFilteredProducts(fetchedProducts);
+    } else {
+      setProducts(prev => [...prev, ...fetchedProducts]);
+      setFilteredProducts(prev => [...prev, ...fetchedProducts]);    
+    }
+    // Update pagination data
+    if (pagination) {
+      setTotalPages(pagination.totalPages || 1);
+      setTotalItems(pagination.totalItems || 0);
+      setItemsPerPage(pagination.itemsPerPage || 12);
+    }
+
+
+  } catch (error) {
+    console.error('Error fetching products:', error.message, error.response);
+    setError('Failed to load products. Please try again.');
+  } finally {
+    setLoading(false);
+    setLoadingMore(false);   }
+};
+
+// const updateFilters = (newFilterValues) => {
+//   // Reset to page 1 when filters change
+//   setCurrentPage(1);
   
-  // Handle wishlist toggle
+//   // Update the relevant filter state
+//   if ('category' in newFilterValues) {
+//     setActiveCategory(newFilterValues.category);
+//   }
+  
+//   if ('minPrice' in newFilterValues) {
+//     setMinPrice(newFilterValues.minPrice);
+//     setMinPriceInput(newFilterValues.minPrice.toString());
+//   }
+  
+//   if ('maxPrice' in newFilterValues) {
+//     setMaxPrice(newFilterValues.maxPrice);
+//     setMaxPriceInput(newFilterValues.maxPrice.toString());
+//   }
+  
+//   if ('minRating' in newFilterValues) {
+//     setMinRatingFilter(newFilterValues.minRating);
+//   }
+  
+//   if ('searchQuery' in newFilterValues) {
+//     setSearchQuery(newFilterValues.searchQuery);
+//   }
+  
+//   if ('sortBy' in newFilterValues) {
+//     setSortBy(newFilterValues.sortBy);
+//   }
+  
+//   if ('inStock' in newFilterValues) {
+//     setInStock(newFilterValues.inStock);
+//   }
+//   console.log('Filters updated:', newFilterValues);
+// };
+
+
+// New function to load more products (for infinite scroll)
+const loadMoreProducts = () => {
+  if (loadingMore || currentPage >= totalPages) return;
+  
+  setLoadingMore(true);
+  setCurrentPage(prev => prev + 1);
+  // setLoadingMore(false);
+};
+
+// Update your existing handleSearch function to use server-side search
+const handleSearch = (e) => {
+  e.preventDefault();
+  // The debounced effect will trigger the actual search
+};
+
+
+// Improved resetFilters function that resets all filter states
+const resetFilters = () => {
+  setActiveCategory('all');
+  setMinPrice(0);
+  setMaxPrice(1000);
+  setMinPriceInput("0");
+  setMaxPriceInput("1000");
+  setSearchQuery('');
+  setDebouncedSearchQuery('');
+  setMinRatingFilter(0);
+  setSortBy('featured');
+  setInStock(false);
+  setCurrentPage(1);
+};
+
+
+
+
+
+
+  
+  // Register callbacks for actions that require authentication
+  useEffect(() => {
+    registerCallback('addProductToWishlist', (productId) => {
+      const product = products.find(p => p.id === productId || p._id === productId);
+      if (product) {
+        toggleWishlistItem(product);
+      }
+    });
+    
+    registerCallback('openAddProductModal', () => {
+      setIsAddProductOpen(true);
+    });
+    
+    registerCallback('addProductToCart', (product, quantity = 1) => {
+      Cart.addToCart(product, quantity);
+    });
+    
+    registerCallback('openProductQuickView', (product) => {
+      setQuickViewProduct(product);
+      setIsQuickViewOpen(true);
+    });
+
+
+  }, [products]);
+  
+
+  // Handle wishlist toggle with authentication
   const handleWishlistToggle = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      toggleWishlistItem(product);
+    if (requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'addProductToWishlist',
+        args: [productId]
+      }
+    })) {
+      const product = products.find(p => p.id === productId || p._id === productId);
+      if (product) {
+        toggleWishlistItem(product);
+      }
     }
   };
   
-  // Handle adding product to cart
-  const handleAddToCart = (product, event) => {
-    if (event) {
-      event.stopPropagation();
-    }
-    addToCart(product);
+// Handle adding product to cart
+const handleAddToCart = (product, event, quantity = 1) => {
+  if (event) {
+    event.stopPropagation();
+  }
+  
+  // Use the updated Cart.addToCart function with quantity
+  Cart.addToCart(product, quantity);
+  
+  // Optional: Give user feedback that item was added
+  if (event && event.target) {
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = `Added ${quantity}!`;
     
-    // Optional: Give user feedback that item was added
-    if (event && event.target) {
-      const button = event.target;
-      const originalText = button.textContent;
-      button.textContent = 'Added!';
-      
-      setTimeout(() => {
-        button.textContent = originalText;
-      }, 1500);
-    }
-  };
-  
-  // Handle quick view
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 1500);
+  }
+};
+
+  // Handle quick view with authentication check if needed
   const handleQuickView = (product, event) => {
     if (event) {
       event.stopPropagation();
     }
-    setQuickViewProduct(product);
-    setIsQuickViewOpen(true);
+    
+    // Make sure we have a valid product before opening
+    if (product && (product.id || product._id)) {
+      setQuickViewProduct(product);
+      setIsQuickViewOpen(true);
+    } else {
+      console.error("Attempted to open quick view with invalid product:", product);
+    }
   };
   
-  // Close quick view
+  // closeQuickView function
   const closeQuickView = () => {
     setIsQuickViewOpen(false);
-    setQuickViewProduct(null);
+    
+    // Delay clearing the product to prevent rendering issues
+    setTimeout(() => {
+      setQuickViewProduct(null);
+    }, 300);
   };
+
+
+
+
+
+const handleProductUpdate = (updatedProduct) => {
+  // Get the ID of the updated product
+  const updatedProductId = updatedProduct._id;
   
+  if (!updatedProductId) {
+    console.error("Updated product has no ID:", updatedProduct);
+    return;
+  }
+  
+
+  
+  // Update the products array with strict ID matching
+  const updatedProducts = products.map(product => {
+    const productId = product._id;
+    
+    // Only update the matching product
+    if (productId && productId === updatedProductId) {
+      // console.log("Found matching product to update:", productId);
+      return { ...product, ...updatedProduct };
+    }
+    
+    // Keep all other products unchanged
+    return product;
+  });
+  
+
+  
+  // Set the main products state
+  setProducts(updatedProducts);
+  
+  // Update filtered products separately with the same strict matching
+  setFilteredProducts(prevFiltered => {
+    return prevFiltered.map(product => {
+      const productId = product._id;
+      
+      if (productId && productId === updatedProductId) {
+        return { ...product, ...updatedProduct };
+      }
+      
+      return product;
+    });
+  });
+  
+  // Update quickViewProduct if it's the one being rated
+  if (quickViewProduct) {
+    const quickViewId = quickViewProduct._id;
+    
+    if (quickViewId && quickViewId === updatedProductId) {
+      setQuickViewProduct({ ...quickViewProduct, ...updatedProduct });
+    }
+  }
+};
+
+
   // Handle image error
   const handleImageError = (e) => {
     e.target.onerror = null; // Prevent infinite error loop
     e.target.src = "https://via.placeholder.com/300x300?text=Product+Image"; 
   };
+  
+  // Handle opening add product modal with authentication check
+  const handleOpenAddProduct = () => {
+    if (requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'openAddProductModal',
+        args: []
+      }
+    })) {
+      setIsAddProductOpen(true);
+    }
+  };
+  
+
+
+    //  Handler functions for price editing
+        const handleMinPriceClick = () => {
+          setMinPriceInput(minPrice.toString());
+          setIsEditingMinPrice(true);
+        };
+
+        const handleMaxPriceClick = () => {
+          setMaxPriceInput(maxPrice.toString());
+          setIsEditingMaxPrice(true);
+        };
+
+        const handleMinPriceChange = (e) => {
+          setMinPriceInput(e.target.value);
+        };
+
+        const handleMaxPriceChange = (e) => {
+          setMaxPriceInput(e.target.value);
+        };
+
+        const handleMinPriceBlur = () => {
+          let value = parseInt(minPriceInput);
+          
+          // Validate input
+          if (isNaN(value) || value < 0) {
+            value = 0;
+          } else if (value > maxPrice) {
+            value = maxPrice;
+          }
+          
+          setMinPrice(value);
+          setMinPriceInput(value.toString());
+          setIsEditingMinPrice(false);
+        };
+
+        const handleMaxPriceBlur = () => {
+          let value = parseInt(maxPriceInput);
+          
+          // Validate input
+          if (isNaN(value) || value < minPrice) {
+            value = minPrice;
+          }
+          
+          setMaxPrice(value);
+          setMaxPriceInput(value.toString());
+          setIsEditingMaxPrice(false);
+        };
+
+        const handleMinPriceKeyDown = (e) => {
+          if (e.key === 'Enter') {
+            handleMinPriceBlur();
+          }
+        };
+
+        const handleMaxPriceKeyDown = (e) => {
+          if (e.key === 'Enter') {
+            handleMaxPriceBlur();
+          }
+        };
+
+
+
+
+
+  
+  // Check if user is authenticated and fetch categories on mount
+  useEffect(() => {
+    // Get predefined categories from backend
+    const fetchCategories = async () => {
+      try {
+        const categoriesResponse = await axios.get(
+          `${API_BASE_URL}/api/v1/market/categories`
+        );
+        
+        if (categoriesResponse.data && categoriesResponse.data.categories) {
+          setCategories(categoriesResponse.data.categories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+  
+  // Handle image upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // File size validation (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        console.log("File is too large. Maximum size is 5MB.");
+        return;
+      }
+      
+      // File type validation
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        console.log("Invalid file type. Please upload JPEG, PNG, or WebP images.");
+        return;
+      }
+      
+      // Read the file as base64 for preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewProduct({
+          ...newProduct,
+          image: reader.result,
+          imageFile: file
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  // Handle form submission for new product with authentication check
+  const handleSubmitProduct = async (e) => {
+    e.preventDefault();
+    
+    // Check authentication before proceeding
+    if (!requireAuth({
+      type: 'CALLBACK',
+      payload: {
+        callbackName: 'submitProductForm',
+        args: []
+      }
+    })) {
+      return;
+    }
+    
+    try {
+      // Set submitting state to true
+      setIsSubmitting(true);
+      
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token');
+      
+      // Create headers with authentication
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+      
+      const formDataHeaders = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      // Step 1: Upload image to Firebase
+      let imageUrl = null;
+      
+      if (newProduct.imageFile) {
+        // Create form data for the image upload
+        const formData = new FormData();
+        formData.append('media', newProduct.imageFile);
+        
+        // Upload image to your Firebase endpoint with folder parameter
+        const imageResponse = await axios.post(
+          `${API_BASE_URL}/api/v1/utils/upload-image?folder=products`, 
+          formData, 
+          {
+            headers: formDataHeaders,
+            withCredentials: true
+          }
+        );
+        
+        // Get the image URL from the response
+        imageUrl = imageResponse.data.imageUrl;
+      }
+      
+      // Step 2: Create the product object with the image URL
+      const productToAdd = {
+        name: newProduct.name,
+        category: newProduct.category,
+        price: parseFloat(newProduct.price),
+        description: newProduct.description,
+        stock: parseInt(newProduct.stock),
+        image: imageUrl
+      };
+      
+      // Step 3: Send the product data to MongoDB API
+      const productResponse = await axios.post(
+        `${API_BASE_URL}/api/v1/market`, 
+        productToAdd, 
+        {
+          headers: authHeaders,
+          withCredentials: true
+        }
+      );
+      
+      // Step 4: Add the new product to the local state
+      const addedProduct = productResponse.data.product;
+      
+      const updatedProducts = [...products, addedProduct];
+      setProducts(updatedProducts);
+      setFilteredProducts(updatedProducts);
+      
+      // Add new category if it doesn't exist
+      if (!categories.includes(addedProduct.category) && addedProduct.category) {
+        setCategories([...categories, addedProduct.category]);
+      }
+      
+      // Success message
+      console.log("Product added successfully!");
+      alert("Product added successfully!");
+      
+      // Reset form and close modal
+      setNewProduct({
+        name: '',
+        category: '',
+        price: '',
+        description: '',
+        stock: '',
+        image: null,
+        imageFile: null
+      });
+      setIsAddProductOpen(false);
+      
+    } catch (error) {
+      // Handle errors
+      console.error("Error adding product:", error);
+      
+      // Check for specific error types
+      if (error.response) {
+        if (error.response.status === 401) {
+          alert("Authentication failed. Please log in again.");
+        } else if (error.response.status === 403) {
+          alert("You don't have permission to add products.");
+        } else {
+          alert(`Failed to add product: ${error.response.data?.msg || 'Server error'}`);
+        }
+      } else {
+        alert("Failed to add product. Please try again.");
+      }
+    } finally {
+      // Reset submitting state
+      setIsSubmitting(false);
+    }
+  };
+
+  // Register product submission callback
+  useEffect(() => {
+    registerCallback('submitProductForm', handleSubmitProduct);
+  }, [newProduct]);
+
+  
+  // Render rating or "No ratings" message
+  const renderRating = (product) => {
+    if (!product.numRatings || product.numRatings === 0) {
+      return <span className="no-ratings">No ratings yet</span>;
+    }
+    
+    // Ensure rating is a valid number between 0 and 5
+    const safeRating = !isNaN(product.averageRating) && product.averageRating !== null ? 
+      Math.max(0, Math.min(5, product.averageRating)) : 0;
+    
+    // Use a safer approach that doesn't rely on String.repeat
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (i <= safeRating) {
+        stars.push('★'); // filled star
+      } else {
+        stars.push('☆'); // empty star
+      }
+    }
+    
+    return (
+      <div className="product-rating">
+        <span className="stars" style={{ color: '#FFD700' }}>
+          {stars.join('')}
+        </span>
+        <span className="rating-value">
+          {safeRating.toFixed(1)} ({product.numRatings})
+        </span>
+      </div>
+    );
+  };
+
+
+
 
   return (
     <div className="market-page">
@@ -279,12 +758,30 @@ const Market = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <button className="search-button">Search</button>
+            <button 
+              className="sell-product-btn" 
+              onClick={handleOpenAddProduct}
+              style={{
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '4px',
+                marginLeft: '10px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Sell a Product
+            </button>
           </div>
         </div>
       </div>
       
       {/* Main Market Content */}
       <div className="market-content container">
+
+      
         <div className="market-layout">
           {/* Sidebar with filters */}
           <aside className="market-sidebar">
@@ -309,63 +806,192 @@ const Market = () => {
               </ul>
             </div>
             
-            <div className="filter-section">
-              <h3>Price Range</h3>
-              <div className="price-range-control">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={priceRange[1]} 
-                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                  className="price-slider"
-                />
-                <div className="price-inputs">
-                  <div>
-                    <span className="price-label">Min:</span>
-                    <span className="price-value">${priceRange[0]}</span>
-                  </div>
-                  <div>
-                    <span className="price-label">Max:</span>
-                    <span className="price-value">${priceRange[1]}</span>
-                  </div>
-                </div>
-              </div>
+        <div className="filter-section">
+          <h3>Price Range</h3>
+          <div className="price-range-control">
+            <div className="price-sliders">
+              <input 
+                type="range" 
+                min="0" 
+                max="1000" 
+                value={minPrice} 
+                onChange={(e) => {
+                  const newMin = parseInt(e.target.value);
+                  if (newMin <= maxPrice) {
+                    setMinPrice(newMin);
+                  }
+                }}
+                className="price-slider min-slider"
+                style={{
+                  width: '100%',
+                  marginBottom: '5px'
+                }}
+              />
+              <input 
+                type="range" 
+                min="0" 
+                max="1000" 
+                value={maxPrice} 
+                onChange={(e) => {
+                  const newMax = parseInt(e.target.value);
+                  if (newMax >= minPrice) {
+                    setMaxPrice(newMax);
+                  }
+                }}
+                className="price-slider max-slider"
+                style={{
+                  width: '100%',
+                  marginBottom: '15px'
+                }}
+              />
             </div>
             
-            <div className="filter-section">
-              <h3>Rating</h3>
-              <div className="rating-filter">
-                <label className="rating-option">
-                  <input type="checkbox" /> 4★ & above
-                </label>
-                <label className="rating-option">
-                  <input type="checkbox" /> 3★ & above
-                </label>
+            <div className="price-inputs" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="min-price-container">
+                <span className="price-label">Min: $</span>
+                {isEditingMinPrice ? (
+                  <input
+                    type="text"
+                    value={minPriceInput}
+                    onChange={handleMinPriceChange}
+                    onBlur={handleMinPriceBlur}
+                    onKeyDown={handleMinPriceKeyDown}
+                    autoFocus
+                    style={{
+                      width: '50px',
+                      padding: '2px 5px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px'
+                    }}
+                  />
+                ) : (
+                  <span 
+                    className="price-value clickable" 
+                    onClick={handleMinPriceClick}
+                    style={{ 
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      color: '#4CAF50'
+                    }}
+                  >
+                    {minPrice}
+                  </span>
+                )}
+              </div>
+              
+              <div className="max-price-container">
+                <span className="price-label">Max: $</span>
+                {isEditingMaxPrice ? (
+                  <input
+                    type="text"
+                    value={maxPriceInput}
+                    onChange={handleMaxPriceChange}
+                    onBlur={handleMaxPriceBlur}
+                    onKeyDown={handleMaxPriceKeyDown}
+                    autoFocus
+                    style={{
+                      width: '50px',
+                      padding: '2px 5px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px'
+                    }}
+                  />
+                ) : (
+                  <span 
+                    className="price-value clickable" 
+                    onClick={handleMaxPriceClick}
+                    style={{ 
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      color: '#4CAF50'
+                    }}
+                  >
+                    {maxPrice}
+                  </span>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+            
+      <div className="filter-section">
+        <h3>Rating</h3>
+        <div className="rating-filter">
+          <div className="rating-slider-container">
+            <input
+        type="range"
+        min="0"
+        max="5"
+        step="0.5"
+        value={minRatingFilter}
+        onChange={(e) => setMinRatingFilter(parseFloat(e.target.value))}
+        className="rating-slider"
+        style={{
+          width: '100%',
+          marginBottom: '10px'
+        }}
+      />
+      <div className="rating-slider-labels" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>Any</span>
+        <span>5★</span>
+      </div>
+      <div className="current-rating-filter" style={{ 
+        textAlign: 'center', 
+        marginTop: '5px',
+        fontWeight: minRatingFilter > 0 ? 'bold' : 'normal',
+        color: minRatingFilter > 0 ? '#4CAF50' : '#666'
+      }}>
+        {minRatingFilter === 0 ? 'All Ratings' : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span>Min Rating: </span>
+            <span style={{ color: '#FFD700', marginLeft: '5px' }}>
+              {'★'.repeat(Math.floor(minRatingFilter))}
+              {minRatingFilter % 1 === 0.5 ? '½' : ''}
+              {'☆'.repeat(5 - Math.ceil(minRatingFilter))}
+            </span>
+            <span style={{ marginLeft: '5px' }}>({minRatingFilter})</span>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
             
             <div className="filter-section">
               <h3>Availability</h3>
               <div className="availability-filter">
-                <label className="availability-option">
-                  <input type="checkbox" /> In Stock
-                </label>
-                <label className="availability-option">
-                  <input type="checkbox" /> Ships in 24 Hours
+              <label className="availability-option">
+                <input 
+                  type="checkbox"
+                  checked={inStock}
+                  onChange={(e) => {
+                    // Update the inStock filter state
+                    setInStock(e.target.checked);
+                    console.log('In Stock filter:', inStock);
+                  }}
+                /> 
+                  In Stock
                 </label>
               </div>
             </div>
             
-            <button className="reset-filters-btn">Reset Filters</button>
+            <button 
+              className="reset-filters-btn"
+              onClick={() => {resetFilters();
+              }}
+            >
+              Reset Filters
+            </button>
           </aside>
           
           {/* Main product grid */}
           <main className="market-main">
             <div className="market-controls">
-              <div className="results-count">
-                {loading ? 'Loading products...' : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} found`}
-              </div>
+            <div className="results-count">
+              {loading ? 'Loading products...' : 
+                `Showing ${filteredProducts.length} of ${totalItems} product${totalItems !== 1 ? 's' : ''}`
+              }
+            </div>
               <div className="sort-control">
                 <label htmlFor="sort-select">Sort by:</label>
                 <select 
@@ -382,14 +1008,18 @@ const Market = () => {
             </div>
             
             {loading ? (
-              <div className="loading-container">
+              <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
                 <ClipLoader color="#4CAF50" size={60} loading={loading} />
-                <p>Loading products...</p>
+                <p style={{ marginLeft: '15px', fontSize: '18px' }}>Loading products...</p>
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="products-grid">
-                {filteredProducts.map(product => (
-                  <div className="product-card" key={product.id}>
+                {filteredProducts.map((product,index) => (
+                    <div 
+                    className="product-card" 
+                    key={product.id || product._id}
+                    ref={index === filteredProducts.length - 1 ? lastProductRef : null}
+                  >
                     {product.badge && (
                       <span className="product-badge">{product.badge}</span>
                     )}
@@ -401,8 +1031,7 @@ const Market = () => {
                         className="product-image" 
                         onError={handleImageError}
                       />
-                      
-                      {/* Add Quick View and Add to Cart buttons */}
+                      {/* Quick View and Add to Cart buttons */}
                       <div className="product-hover-buttons">
                         <button 
                           className="product-quick-view-btn"
@@ -410,12 +1039,16 @@ const Market = () => {
                         >
                           Quick View
                         </button>
-                        <button 
+                        {product.stock>0?(<button 
                           className="product-add-cart-btn"
                           onClick={(e) => handleAddToCart(product, e)}
                         >
                           Add to Cart
-                        </button>
+                        </button>):
+                        (<button 
+                          className="product-out-of-stock-btn"
+                          disabled
+                      > Out of Stock</button>)}
                       </div>
                     </div>
                     
@@ -423,19 +1056,17 @@ const Market = () => {
                       <h3 className="product-name">{product.name}</h3>
                       <div className="product-meta">
                         <div className="product-category">{product.category}</div>
-                        <div className="product-rating">
-                          <span className="stars">{'★'.repeat(Math.floor(product.rating))}</span>
-                          <span className="rating-value">{product.rating}</span>
-                        </div>
+                        {/* Updated Rating Display */}
+                        {renderRating(product)}
                       </div>
                       <p className="product-description">{product.description.substring(0, 80)}...</p>
                       <div className="product-price-row">
                         <span className="product-price">${product.price.toFixed(2)}</span>
                         <button 
-                          className={`wishlist-btn ${isInWishlist(product.id) ? 'active' : ''}`}
-                          onClick={() => handleWishlistToggle(product.id)}
+                          className={`wishlist-btn ${isInWishlist(product.id || product._id) ? 'active' : ''}`}
+                          onClick={() => handleWishlistToggle(product.id || product._id)}
                         >
-                          {isInWishlist(product.id) ? '❤️' : '♡'}
+                          {isInWishlist(product.id || product._id) ? '❤️' : '♡'}
                         </button>
                       </div>
                       <div className="product-actions">
@@ -455,99 +1086,299 @@ const Market = () => {
                     </div>
                   </div>
                 ))}
+                {/* Loading more products indicator */}
+                {loadingMore && (
+                    <div className="loading-more" style={{ 
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      width: '100%',
+                      background: 'rgba(255,255,255,0.8)',
+                      zIndex: 5
+                    }}>
+                      <ClipLoader color="#4CAF50" size={30} loading={loadingMore} />
+                      <p style={{ marginLeft: '10px' }}>Loading more products...</p>
+                    </div>
+                  )}
               </div>
             ) : (
               <div className="no-results">
                 <p>No products found matching your filters.</p>
                 <button 
-                  className="reset-btn"
-                  onClick={() => {
-                    setActiveCategory('all');
-                    setPriceRange([0, 100]);
-                    setSearchQuery('');
-                  }}
-                >
-                  Reset Filters
-                </button>
+              className="reset-filters-btn"
+              onClick={() => {
+              resetFilters(); }}
+            >
+              Reset Filters
+            </button>
               </div>
             )}
+
           </main>
+
+
         </div>
       </div>
       
-      {/* Promotional section */}
-      <section className="promo-section container">
-        <div className="promo-header">
-          <h2>Special Offers</h2>
-          <p>Limited time deals on select products</p>
-        </div>
-        
-        <div className="promotions">
-          <div className="promo-card">
-            <div className="promo-content">
-              <h3>Summer Sale</h3>
-              <p>20% off all outdoor plants</p>
-              <span className="promo-code">SUMMER20</span>
-              <button className="promo-btn">Shop Now</button>
-            </div>
-          </div>
+      {/* Add Product Overlay Form */}
+      {isAddProductOpen && (
+        <>
+          <div 
+            className="product-form-overlay"
+            onClick={() => setIsAddProductOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 999,
+            }}
+          ></div>
           
-          <div className="promo-card">
-            <div className="promo-content">
-              <h3>Bundle & Save</h3>
-              <p>Buy any 3 plants, get the 4th free</p>
-              <span className="promo-code">BUNDLE4</span>
-              <button className="promo-btn">Shop Now</button>
-            </div>
-          </div>
-          
-          <div className="promo-card">
-            <div className="promo-content">
-              <h3>New Arrivals</h3>
-              <p>First-time customers get 10% off</p>
-              <span className="promo-code">WELCOME10</span>
-              <button className="promo-btn">Shop Now</button>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Shipping policy section */}
-      <section className="shipping-section">
-        <div className="container">
-          <div className="shipping-features">
-            <div className="shipping-feature">
-              <div className="feature-icon">🚚</div>
-              <h3>Free Shipping</h3>
-              <p>On all orders over $50</p>
-            </div>
-            
-            <div className="shipping-feature">
-              <div className="feature-icon">🪴</div>
-              <h3>Plant Guarantee</h3>
-              <p>30-day guarantee on all plants</p>
-            </div>
-            
-            <div className="shipping-feature">
-              <div className="feature-icon">🔄</div>
-              <h3>Easy Returns</h3>
-              <p>Simple return process</p>
+          <div 
+            className="product-form-container"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '90%',
+              maxWidth: '600px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '20px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+              zIndex: 1000,
+            }}
+          >
+            <div className="product-form-header" style={{ marginBottom: '20px' }}>
+              <h2 style={{ marginBottom: '10px' }}>Sell a New Product</h2>
+              <p style={{ color: '#666' }}>List your plant or gardening item for sale</p>
+              <button 
+                className="close-form-btn"
+                onClick={() => setIsAddProductOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
             </div>
             
-            <div className="shipping-feature">
-              <div className="feature-icon">🌐</div>
-              <h3>Nationwide Delivery</h3>
-              <p>We ship to all 50 states</p>
-            </div>
+            <form onSubmit={handleSubmitProduct}>
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label htmlFor="name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Product Name *
+                </label>
+                <input 
+                  type="text" 
+                  id="name" 
+                  name="name"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
+              </div>
+              
+              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="category" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Category *
+                  </label>
+                  <select 
+                    id="category" 
+                    name="category"
+                    value={newProduct.category}
+                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="price" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Price ($) *
+                  </label>
+                  <input 
+                    type="number" 
+                    id="price" 
+                    name="price"
+                    min="0.01" 
+                    step="0.01"
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd',
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label htmlFor="description" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Description *
+                </label>
+                <textarea 
+                  id="description" 
+                  name="description"
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                  rows="4"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    resize: 'vertical',
+                  }}
+                ></textarea>
+              </div>
+              
+              <div className="form-group" style={{ flex: 1 }}>
+                <label htmlFor="stock" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Stock Quantity *
+                </label>
+                <input 
+                  type="number" 
+                  id="stock" 
+                  name="stock"
+                  min="1" 
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label htmlFor="image" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Product Image *
+                </label>
+                <input 
+                  type="file" 
+                  id="image" 
+                  name="image"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  required={!newProduct.image}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                  }}
+                />
+                
+                {newProduct.image && (
+                  <div className="image-preview" style={{ marginTop: '10px' }}>
+                    <img 
+                      src={newProduct.image} 
+                      alt="Product preview" 
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '200px',
+                        objectFit: 'contain',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="form-actions" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddProductOpen(false)}
+                  disabled={isSubmitting}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#f5f5f5',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <ClipLoader color="#ffffff" size={20} loading={true} style={{ marginRight: '10px' }} />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    'List Product'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        </div>
-      </section>
-      
+        </>
+      )}
+
       {/* Product Quick View Modal */}
       <ProductQuickView 
         product={quickViewProduct}
         isOpen={isQuickViewOpen}
         onClose={closeQuickView}
+        onProductUpdate={handleProductUpdate}
       />
     </div>
   );

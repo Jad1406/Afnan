@@ -1,11 +1,13 @@
-// Navbar.jsx with Auth
+
+// Navbar.jsx with AuthContext Integration
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
 import { useCart } from '../../CartContext';
 import { useWishlist } from '../../WishlistContext';
+import { useAuth } from '../Auth/AuthContext'; // Import the auth context hook
 
-const Navbar = ({ darkMode, toggleDarkMode, isAuthenticated, onLogout }) => {
+const Navbar = ({ darkMode, toggleDarkMode }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
@@ -18,6 +20,9 @@ const Navbar = ({ darkMode, toggleDarkMode, isAuthenticated, onLogout }) => {
   
   // Get wishlist context
   const { wishlistCount, toggleWishlist } = useWishlist();
+
+  // Get auth context
+  const { isAuthenticated, logout } = useAuth();
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -38,13 +43,7 @@ const Navbar = ({ darkMode, toggleDarkMode, isAuthenticated, onLogout }) => {
   // Handle logout
   const handleLogout = () => {
     setProfileMenuOpen(false);
-    
-    if (onLogout) {
-      onLogout();
-    } else {
-      localStorage.removeItem('token');
-      navigate('/login');
-    }
+    logout(); // Use the logout function from AuthContext
   };
   
   // Close profile menu when clicking outside

@@ -1,42 +1,90 @@
-// ProductQuickView.jsx with Wishlist integration
-import React from 'react';
-import './ProductQuickView.css';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../../CartContext';
-import { useWishlist } from '../../WishlistContext'; // Import useWishlist
+import { useWishlist } from '../../WishlistContext';
+import { useAuth } from '../../components/Auth/AuthContext';
+import ProductRating from '../ProductRating/ProductRating';
+import ProductReviews from '../ProductRating/ProductReviews';
+import './ProductQuickView.css';
 
-const ProductQuickView = ({ product, isOpen, onClose }) => {
+// Consistent API base URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+
+const ProductQuickView = ({ product, isOpen, onClose, onProductUpdate }) => {
+  const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState('description');
+  const [reviewChangeFlag, setReviewChangeFlag] = useState(0);
+  
   const { addToCart } = useCart();
-  const { toggleWishlistItem, isInWishlist } = useWishlist(); // Get wishlist functions
-
-  if (!isOpen || !product) return null;
-
-  const handleAddToCart = () => {
-    addToCart(product);
-    // Optionally provide feedback that item was added
-    const button = document.querySelector('.quick-view-add-btn');
-    if (button) {
-      const originalText = button.textContent;
-      button.textContent = 'Added to Cart!';
-      button.disabled = true;
-      
-      setTimeout(() => {
-        button.textContent = originalText;
-        button.disabled = false;
-      }, 1500);
+  const { toggleWishlistItem, isInWishlist } = useWishlist();
+  const { isAuthenticated, requireAuth } = useAuth();
+  
+  // Reset quantity when product changes or modal opens
+  useEffect(() => {
+    if (product && isOpen) {
+      setQuantity(1);
+    }
+  }, [product, isOpen]);
+  
+  // If modal is closed or no product, don't render anything
+  if (!isOpen || !product) {
+    return null;
+  }
+  
+  // Get product ID (support both id and _id for MongoDB)
+  const productId = product.id || product._id;
+  
+  const handleQuantityChange = (e) => {
+    const value = parseInt(e.target.value);
+    if (value > 0 && value <= product.stock) {
+      setQuantity(value);
     }
   };
   
-  // Handle wishlist toggle
+  const incrementQuantity = () => {
+    if (quantity < product.stock) {
+      setQuantity(quantity + 1);
+    }
+  };
+  
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+  
+  const handleAddToCart = () => {
+    // console.log(`Adding ${quantity} of product ${productId} to cart`);
+    addToCart(product, quantity );
+    onClose();
+  };
+  
   const handleWishlistToggle = () => {
+    if (!isAuthenticated) {
+      requireAuth({
+        type: 'REDIRECT',
+        payload: { path: window.location.pathname }
+      });
+      return;
+    }
     toggleWishlistItem(product);
   };
 
-  // Handle image error
-  const handleImageError = (e) => {
-    e.target.onerror = null; // Prevent infinite error loop
-    e.target.src = "https://via.placeholder.com/400x400?text=Plant+Image"; 
+  // Unified handler for all review actions
+  const handleReviewAction = (updatedProduct, action) => {
+    // Update the product data
+    if (updatedProduct && onProductUpdate) {
+      onProductUpdate(updatedProduct);
+    }
+    
+    // Trigger review list refresh
+    setReviewChangeFlag(prev => prev + 1);
   };
 
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = "https://via.placeholder.com/300x300?text=Product+Image";
+  };
+  
   return (
     <div className="quick-view-modal-overlay" onClick={onClose}>
       <div className="quick-view-modal" onClick={(e) => e.stopPropagation()}>
@@ -68,12 +116,10 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
             </div>
             
             <div className="quick-view-rating">
-              <div className="stars">
-                {'★'.repeat(Math.floor(product.rating))}
-                {product.rating % 1 !== 0 ? '⯨' : ''}
-                {'☆'.repeat(5 - Math.ceil(product.rating))}
-              </div>
-              <span className="rating-value">{product.rating}</span>
+              <ProductRating 
+                product={product}
+                onReviewAction={handleReviewAction}
+              />
             </div>
             
             <div className="quick-view-price">
@@ -81,58 +127,85 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
               <span className="price-value">${product.price.toFixed(2)}</span>
             </div>
             
-            <div className="quick-view-description">
-              <h3>Description</h3>
-              <p>{product.description || `The ${product.name} is a beautiful ${product.category} plant known for its ${product.tags ? product.tags.join(' and ') : 'unique characteristics'}. This plant is a great addition to any collection.`}</p>
+            <div className="product-availability">
+              {product.stock > 0 ? (
+                <span className="in-stock">In Stock ({product.stock} available)</span>
+              ) : (
+                <span className="out-of-stock">Out of Stock</span>
+              )}
             </div>
             
-            <div className="quick-view-tags">
-              {product.tags && product.tags.map((tag, idx) => (
-                <span className="quick-view-tag" key={idx}>{tag}</span>
-              ))}
-            </div>
-            
-            <div className="quick-view-care">
-              <h3>Care Tips</h3>
-              <ul className="care-tips-list">
-                <li>
-                  <span className="care-icon">☀️</span>
-                  <span className="care-text">{
-                    product.tags && product.tags.includes('low light') 
-                      ? 'Thrives in low to medium light conditions'
-                      : product.tags && product.tags.includes('bright light')
-                        ? 'Requires bright, indirect light'
-                        : 'Place in moderate indirect light'
-                  }</span>
-                </li>
-                <li>
-                  <span className="care-icon">💧</span>
-                  <span className="care-text">{
-                    product.tags && product.tags.includes('drought tolerant')
-                      ? 'Allow soil to dry completely between waterings'
-                      : 'Water when top inch of soil is dry'
-                  }</span>
-                </li>
-                <li>
-                  <span className="care-icon">🌡️</span>
-                  <span className="care-text">Keep in temperatures between 65-80°F (18-27°C)</span>
-                </li>
-              </ul>
+            <div className="quantity-selector">
+              <button 
+                className="quantity-btn"
+                onClick={decrementQuantity}
+                disabled={quantity <= 1}
+              >
+                -
+              </button>
+              <input
+                type="number"
+                value={quantity}
+                onChange={handleQuantityChange}
+                min="1"
+                max={product.stock}
+              />
+              <button 
+                className="quantity-btn"
+                onClick={incrementQuantity}
+                disabled={quantity >= product.stock}
+              >
+                +
+              </button>
             </div>
             
             <div className="quick-view-actions">
               <button 
                 className="quick-view-add-btn" 
                 onClick={handleAddToCart}
+                disabled={product.stock <= 0}
               >
                 Add to Cart
               </button>
               <button 
-                className={`quick-view-wishlist-btn ${isInWishlist(product.id) ? 'active' : ''}`}
+                className={`quick-view-wishlist-btn ${isInWishlist(productId) ? 'active' : ''}`}
                 onClick={handleWishlistToggle}
               >
-                {isInWishlist(product.id) ? 'Remove from Wishlist ❤️' : 'Add to Wishlist ♡'}
+                {isInWishlist(productId) ? '❤️ Remove from Wishlist' : '♡ Add to Wishlist'}
               </button>
+            </div>
+            
+            <div className="product-tabs">
+              <div className="tab-buttons">
+                <button 
+                  className={activeTab === 'description' ? 'active' : ''}
+                  onClick={() => setActiveTab('description')}
+                >
+                  Description
+                </button>
+                <button 
+                  className={activeTab === 'reviews' ? 'active' : ''}
+                  onClick={() => setActiveTab('reviews')}
+                >
+                  Reviews ({product.numRatings || 0})
+                </button>
+              </div>
+              
+              <div className="tab-content">
+                {activeTab === 'description' ? (
+                  <div className="description-tab">
+                    <p>{product.description}</p>
+                  </div>
+                ) : (
+                  <div className="reviews-tab">
+                    <ProductReviews 
+                      productId={productId}
+                      refreshFlag={reviewChangeFlag}
+                      onReviewAction={handleReviewAction}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -1,25 +1,130 @@
 // Education.jsx - Hybrid approach
 // Import plant images directly (only these were having issues)
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './Education.css';
 
-// Import plant images directly 
+// Import plant images directly
 import monsteraImage from '../assets/images/monstera.1adcde5ca2aedb6e35be.jpeg';
 import snakePlantImage from '../assets/images/snake-plant.3ef0286b35a88b16db99.jpeg';
 import fiddleLeafImage from '../assets/images/fiddle-leaf.156c60ff0976bd146865.jpeg';
 import pothosImage from '../assets/images/pothos.66f1e2c06f7825e20421.jpeg';
 import spiderPlantImage from '../assets/images/spider-plant.1c977f7f6c6a2e418cf0.jpeg';
 import zzPlantImage from '../assets/images/zz-plant.7c181c45ab6059252490.jpeg';
-
+import { useAuth } from '../components/Auth/AuthContext';
 const Education = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  
-  // Plant encyclopedia data with imported images
-  //Probably no backend for this data, so we can keep it as is, or, use a plant-data api 
-  const plantsData = [
+  const [plantsData, setPlantsData] = useState([]);
+  const [guidesData, setGuidesData] = useState([]);
+  const [questionsData, setQuestionsData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // State for question modal
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [newQuestion, setNewQuestion] = useState({
+    questionAsked: '',
+    body: '',
+    category: ''
+  });
+
+  // State for answers
+  const [answers, setAnswers] = useState({});  // Object to store answers for each question
+
+
+  const { user, requireAuth } = useAuth();
+  const token = localStorage.getItem('token') || user?.token;
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          fetchPlantsData(),
+          fetchGuidesData(),
+          fetchQuestionsData()
+        ]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+  const baseUrl = "http://localhost:3000/api/v1";
+  const fetchPlantsData = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/education/plants`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Plants fetched successfully:", data);
+        setPlantsData(data);
+        return data;
+      } else {
+        console.error("Failed to fetch plants:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching plants data:", error);
+      // If we can't fetch plants, use the dummy data
+      setPlantsData(plantsDataDummyArray);
+    }
+    return [];
+  };
+
+  const fetchGuidesData = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/education/guides`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Guides fetched successfully:", data);
+        setGuidesData(data);
+        return data;
+      } else {
+        console.error("Failed to fetch guides:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching guides data:", error);
+      // If we can't fetch guides, use the dummy data
+      setGuidesData(guidesDataDummyArray);
+    }
+    return [];
+  };
+
+  const fetchQuestionsData = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/education/questions`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Questions fetched successfully:", data);
+        setQuestionsData(data);
+        return data;
+      } else {
+        console.error("Failed to fetch questions:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching questions data:", error);
+      // If we can't fetch questions, use the dummy data
+      setQuestionsData(questionsDataDummyArray);
+    }
+    return [];
+  };
+
+  // Plant encyclopedia dummy data with imported images (fallback if API fails)
+  const plantsDataDummyArray = [
     {
-      id: 1,
       name: "Monstera Deliciosa",
       commonName: "Swiss Cheese Plant",
       category: "foliage",
@@ -36,7 +141,6 @@ const Education = () => {
       description: "Monstera deliciosa is famous for its large, glossy, perforated leaves. As the plant matures, the leaves develop their characteristic holes (fenestrations)."
     },
     {
-      id: 2,
       name: "Sansevieria Trifasciata",
       commonName: "Snake Plant",
       category: "succulent",
@@ -53,7 +157,6 @@ const Education = () => {
       description: "The Snake Plant is one of the most tolerant houseplants. Its stiff, upright leaves come in a variety of patterns and colors, and it's excellent at purifying air."
     },
     {
-      id: 3,
       name: "Ficus Lyrata",
       commonName: "Fiddle Leaf Fig",
       category: "foliage",
@@ -70,7 +173,6 @@ const Education = () => {
       description: "The Fiddle Leaf Fig is popular for its large, violin-shaped leaves. It can be finicky about changes in environment, but rewards proper care with dramatic foliage."
     },
     {
-      id: 4,
       name: "Epipremnum Aureum",
       commonName: "Pothos",
       category: "vine",
@@ -87,7 +189,6 @@ const Education = () => {
       description: "Pothos is known for its trailing vines and heart-shaped leaves. It's extremely adaptable and one of the easiest houseplants to grow."
     },
     {
-      id: 5,
       name: "Chlorophytum Comosum",
       commonName: "Spider Plant",
       category: "foliage",
@@ -104,7 +205,6 @@ const Education = () => {
       description: "The Spider Plant produces arching leaves and tiny plantlets that dangle from long stems, resembling spiders. It's excellent for beginners and pet owners."
     },
     {
-      id: 6,
       name: "Zamioculcas Zamiifolia",
       commonName: "ZZ Plant",
       category: "foliage",
@@ -121,9 +221,9 @@ const Education = () => {
       description: "The ZZ Plant has glossy, dark green leaves that grow from thick rhizomes. It's extremely drought-tolerant and can survive long periods of neglect."
     }
   ];
-  
-  // How-to guides data - kept as is since you said this part was working
-  const guidesData = [
+
+  // How-to guides dummy data (fallback if API fails)
+  const guidesDataDummyArray = [
     {
       id: 1,
       title: "How to Propagate Houseplants",
@@ -181,9 +281,9 @@ const Education = () => {
       content: "Pests are an unfortunate reality of plant parenthood, but catching them early is key to successful treatment. This guide covers identification and treatment for common houseplant pests..."
     }
   ];
-  
-  // Q&A data - No changes needed here
-  const questionsData = [
+
+  // Q&A dummy data (fallback if API fails)
+  const questionsDataDummyArray = [
     {
       id: 1,
       question: "Why are my plant's leaves turning yellow?",
@@ -247,49 +347,192 @@ const Education = () => {
       ]
     }
   ];
-  
+
   // Filter plants based on search and category
   const filteredPlants = plantsData.filter(plant => {
-    const matchesSearch = 
+    const matchesSearch =
       plant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plant.commonName.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      (plant.commercialName && plant.commercialName.toLowerCase().includes(searchQuery.toLowerCase()));
+
     const matchesCategory = activeCategory === 'all' || plant.category === activeCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
-  
+
   // Filter guides based on search
-  const filteredGuides = guidesData.filter(guide => 
-    guide.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredGuides = guidesData.filter(guide =>
+    guide.title && guide.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
-  // Image error handler function
+
+  // Image error handler function - using a static local image to prevent infinite loops
   const handleImageError = (e) => {
     console.error("Failed to load image");
     e.target.onerror = null; // Prevents infinite error loop
-    e.target.src = "https://via.placeholder.com/300x200?text=Plant+Image";
+    // Use one of our imported images as a fallback instead of an external URL
+    e.target.src = monsteraImage;
   };
-  
+
+  // Handle input change for new question form
+  const handleQuestionInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewQuestion(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle input change for answers
+  const handleAnswerInputChange = (questionId, value) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: value
+    }));
+  };
+
+  // Submit a new question
+  const submitQuestion = async () => {
+    // Validate inputs
+    requireAuth();
+    if (!newQuestion.questionAsked.trim() || !newQuestion.body.trim()) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/education/questions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // In a real app, you would include authentication
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newQuestion,
+          user: user.userId 
+        })
+      });
+
+      if (response.ok) {
+        // Reset form and close modal
+        setNewQuestion({
+          questionAsked: '',
+          body: '',
+          category: 'light'
+        });
+        setShowQuestionModal(false);
+
+        // Refresh questions data
+        fetchQuestionsData();
+        alert("Question submitted successfully!");
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Failed to submit question'}`);
+      }
+    } catch (error) {
+      console.error("Error submitting question:", error);
+      alert("Failed to submit question. Please try again.");
+    }
+  };
+
+  // Submit an answer to a question
+  const submitAnswer = async (questionId) => {
+    requireAuth();
+    if (!answers[questionId] || !answers[questionId].trim()) {
+      alert("Please enter your answer");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/education/answers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user: user.userId,
+          body: answers[questionId],
+          questionAnswered: questionId,
+        })
+      });
+
+      if (response.ok) {
+        // Clear the answer input
+        setAnswers(prev => ({
+          ...prev,
+          [questionId]: ''
+        }));
+
+        // Refresh questions data
+        fetchQuestionsData();
+        alert("Answer submitted successfully!");
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Failed to submit answer'}`);
+      }
+    } catch (error) {
+      console.error("Error submitting answer:", error);
+      alert("Failed to submit answer. Please try again.");
+    }
+  };
+
+  // Handle voting on answers
+  const handleVote = async (answerId, voteType) => {
+    if (!answerId) return;
+
+    try {
+      const endpoint = voteType === 'up'
+        ? `${baseUrl}/education/answers/upvote/${answerId}`
+        : `${baseUrl}/education/answers/downvote/${answerId}`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // In a real app, you would include authentication
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // Refresh the questions data to show updated votes
+        fetchQuestionsData();
+        alert(`You ${voteType === 'up' ? 'upvoted' : 'downvoted'} the answer.`);
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || `Failed to ${voteType === 'up' ? 'upvote' : 'downvote'} answer`}`);
+      }
+    } catch (error) {
+      console.error(`Error ${voteType === 'up' ? 'upvoting' : 'downvoting'} answer:`, error);
+      alert(`Failed to ${voteType === 'up' ? 'upvote' : 'downvote'} answer. Please try again.`);
+    }
+  };
+
   return (
     <div className="education-page">
-      <div className="education-header">
-        <div className="container">
-          <h1>Plant Education Center</h1>
-          <p>Expand your plant knowledge with our comprehensive resources, guides, and expert advice.</p>
-          
-          <div className="search-bar">
-            <input 
-              type="text" 
-              placeholder="Search plants, guides, and questions..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button className="search-button">Search</button>
-          </div>
+      {isLoading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading plant data...</p>
         </div>
-      </div>
-      
+      ) : (
+        <>
+          <div className="education-header">
+            <div className="container">
+              <h1>Plant Education Center</h1>
+              <p>Expand your plant knowledge with our comprehensive resources, guides, and expert advice.</p>
+
+              <div className="search-bar">
+                <input
+                  type="text"
+                  placeholder="Search plants, guides, and questions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button className="search-button">Search</button>
+              </div>
+            </div>
+          </div>
+
       <div className="education-content container">
         {/* Plant Encyclopedia Section */}
         <section className="encyclopedia-section">
@@ -297,33 +540,33 @@ const Education = () => {
             <h2>Plant Encyclopedia</h2>
             <p>Discover detailed information about a wide variety of houseplants.</p>
           </div>
-          
+
           <div className="category-filters">
-            <button 
+            <button
               className={`category-button ${activeCategory === 'all' ? 'active' : ''}`}
               onClick={() => setActiveCategory('all')}
             >
               All Plants
             </button>
-            <button 
+            <button
               className={`category-button ${activeCategory === 'foliage' ? 'active' : ''}`}
               onClick={() => setActiveCategory('foliage')}
             >
               Foliage Plants
             </button>
-            <button 
+            <button
               className={`category-button ${activeCategory === 'succulent' ? 'active' : ''}`}
               onClick={() => setActiveCategory('succulent')}
             >
               Succulents & Cacti
             </button>
-            <button 
+            <button
               className={`category-button ${activeCategory === 'vine' ? 'active' : ''}`}
               onClick={() => setActiveCategory('vine')}
             >
               Climbing & Trailing
             </button>
-            <button 
+            <button
               className={`category-button ${activeCategory === 'flowering' ? 'active' : ''}`}
               onClick={() => setActiveCategory('flowering')}
             >
@@ -333,29 +576,29 @@ const Education = () => {
           <div className="plants-grid">
             {filteredPlants.length > 0 ? (
               filteredPlants.map(plant => (
-                <div className="plant-card" key={plant.id}>
+                <div className="plant-card" key={plant._id}>
                   <div className="plant-image-container">
-                    <img 
-                      src={plant.image} 
-                      alt={plant.name} 
-                      className="plant-image" 
+                    <img
+                      src={plant.image || "https://via.placeholder.com/300x200?text=Plant+Image"}
+                      alt={plant.name}
+                      className="plant-image"
                       onError={handleImageError}
                     />
                   </div>
                   <div className="plant-info">
                     <h3 className="plant-name">{plant.name}</h3>
-                    <p className="plant-common-name">{plant.commonName}</p>
-                    
+                    <p className="plant-common-name">{plant.commercialName || "Common Name Not Available"}</p>
+
                     <div className="plant-care-icons">
                       <div className="care-item" title="Light Requirements">
                         <span className="care-icon">☀️</span>
                         <span className="care-label">Light:</span>
-                        <span className="care-value">{plant.light.split(' ')[0]}</span>
+                        <span className="care-value">{plant.light}</span>
                       </div>
                       <div className="care-item" title="Water Requirements">
                         <span className="care-icon">💧</span>
                         <span className="care-label">Water:</span>
-                        <span className="care-value">{plant.water.includes('dry') ? 'Low' : 'Moderate'}</span>
+                        <span className="care-value">{plant.water && plant.water.includes('dry') ? 'Low' : 'Moderate'}</span>
                       </div>
                       <div className="care-item" title="Difficulty Level">
                         <span className="care-icon">🌱</span>
@@ -363,9 +606,9 @@ const Education = () => {
                         <span className="care-value">{plant.difficulty}</span>
                       </div>
                     </div>
-                    
-                    <p className="plant-description">{plant.description.substring(0, 100)}...</p>
-                    
+
+                    <p className="plant-description">{plant.description && plant.description.substring(0, 100)}...</p>
+
                     <button className="view-details-btn">View Details</button>
                   </div>
                 </div>
@@ -377,26 +620,26 @@ const Education = () => {
             )}
           </div>
         </section>
-        
+
         {/* How-To Guides Section */}
         <section className="guides-section">
           <div className="section-header">
             <h2>How-To Guides</h2>
             <p>Step-by-step instructions for common plant care tasks and projects.</p>
           </div>
-          
+
           <div className="guides-grid">
             {filteredGuides.map(guide => (
               <div className="guide-card" key={guide.id}>
                 <div className="guide-image-container">
-                  <img 
-                    src={guide.image} 
-                    alt={guide.title} 
-                    className="guide-image" 
+                  <img
+                    src={guide.image}
+                    alt={guide.title}
+                    className="guide-image"
                     onError={handleImageError}
                   />
                   <div className="guide-icon">
-                    {guide.category === 'propagation' ? '✂️' : 
+                    {guide.category === 'propagation' ? '✂️' :
                      guide.category === 'maintenance' ? '🔄' : '🛡️'}
                   </div>
                 </div>
@@ -407,7 +650,7 @@ const Education = () => {
                   </div>
                   <h3 className="guide-title">{guide.title}</h3>
                   <p className="guide-excerpt">{guide.content.substring(0, 120)}...</p>
-                  
+
                   <div className="guide-details">
                     <div className="guide-time">
                       <span className="time-icon">⏱️</span>
@@ -420,62 +663,201 @@ const Education = () => {
             ))}
           </div>
         </section>
-        
-        {/* Q&A Section - No changes needed */}
+
+        {/* Q&A Section */}
         <section className="qa-section">
           <div className="section-header">
             <h2>Plant Questions & Answers</h2>
             <p>Get expert advice for your plant care questions.</p>
-            <button className="ask-question-btn">Ask a Question</button>
+            <button
+              className="ask-question-btn"
+              onClick={() => setShowQuestionModal(true)}
+            >
+              Ask a Question
+            </button>
           </div>
-          
-          <div className="questions-container">
-            {questionsData.map(question => (
-              <div className="question-card" key={question.id}>
-                <div className="question-header">
-                  <h3 className="question-title">{question.question}</h3>
-                  <div className="question-meta">
-                    <span className="question-author">Asked by {question.askedBy}</span>
-                    <span className="question-date">{question.date}</span>
-                    <span className="question-category">{question.category.replace('-', ' ')}</span>
+
+          {/* Question Modal */}
+          {showQuestionModal && (
+            <div className="modal-overlay">
+              <div className="question-modal">
+                <div className="modal-header">
+                  <h3>Ask a Plant Question</h3>
+                  <button className="close-modal" onClick={() => setShowQuestionModal(false)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label htmlFor="questionAsked">Question Title:</label>
+                    <input
+                      type="text"
+                      id="questionAsked"
+                      name="questionAsked"
+                      value={newQuestion.questionAsked}
+                      onChange={handleQuestionInputChange}
+                      placeholder="e.g., How often should I water my monstera?"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="body">Question Details:</label>
+                    <textarea
+                      id="body"
+                      name="body"
+                      value={newQuestion.body}
+                      onChange={handleQuestionInputChange}
+                      rows="4"
+                      placeholder="Provide more details about your question..."
+                    ></textarea>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="category">Category:</label>
+                    <select
+                      id="category"
+                      name="category"
+                      value={newQuestion.category}
+                      onChange={handleQuestionInputChange}
+                    >
+                      <option value="light">Light</option>
+                      <option value="water">Water</option>
+                      <option value="humidity">Humidity</option>
+                      <option value="temperature">Temperature</option>
+                      <option value="soil">Soil</option>
+                      <option value="difficulty">Difficulty</option>
+                      <option value="toxic">Toxicity</option>
+                      <option value="growth">Growth</option>
+                      <option value="propagation">Propagation</option>
+                      <option value="description">General</option>
+                    </select>
                   </div>
                 </div>
-                
-                <div className="answers-container">
-                  <h4>{question.answers.length} Answer{question.answers.length !== 1 ? 's' : ''}</h4>
-                  
-                  {question.answers.map(answer => (
-                    <div className="answer" key={answer.id}>
-                      <div className="answer-content">
-                        <p>{answer.content}</p>
-                      </div>
-                      <div className="answer-footer">
-                        <div className="answer-meta">
-                          <span className="answer-author">Answered by {answer.answeredBy}</span>
-                          <span className="answer-date">{answer.date}</span>
-                        </div>
-                        <div className="answer-votes">
-                          <button className="vote-btn upvote">▲</button>
-                          <span className="vote-count">{answer.votes}</span>
-                          <button className="vote-btn downvote">▼</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <div className="add-answer">
-                    <textarea 
-                      placeholder="Share your knowledge by answering this question..."
-                      rows="3"
-                    ></textarea>
-                    <button className="submit-answer-btn">Submit Answer</button>
-                  </div>
+                <div className="modal-footer">
+                  <button className="cancel-btn" onClick={() => setShowQuestionModal(false)}>Cancel</button>
+                  <button className="submit-btn" onClick={submitQuestion}>Submit Question</button>
                 </div>
               </div>
-            ))}
+            </div>
+          )}
+
+          <div className="questions-container">
+            {questionsData.length > 0 ? (
+              questionsData.map(question => (
+                <div className="question-card" key={question._id || question.id}>
+                  <div className="question-header">
+                    <h3 className="question-title">{question.questionAsked || question.question}</h3>
+                    <div className="question-meta">
+                      <span className="question-author">
+                        Asked by {question.user?.name || question.askedBy || "Anonymous"}
+                      </span>
+                      <span className="question-date">
+                        {question.createdAt
+                          ? new Date(question.createdAt).toLocaleDateString()
+                          : question.date || "Unknown date"}
+                      </span>
+                      <span className="question-category">
+                        {question.category && question.category.replace('-', ' ')}
+                      </span>
+                    </div>
+                    {question.body && (
+                      <div className="question-body">
+                        <p>{question.body}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="answers-container">
+                    {/* Handle both database structure and dummy data structure */}
+                    {question.replies ? (
+                      // Database structure
+                      <>
+                        <h4>{question.replies.length} Answer{question.replies.length !== 1 ? 's' : ''}</h4>
+
+                        {question.replies.length > 0 ? (
+                          question.replies.map(answer => (
+                            <div className="answer" key={answer._id}>
+                              <div className="answer-content">
+                                <p>{answer.body}</p>
+                              </div>
+                              <div className="answer-footer">
+                                <div className="answer-meta">
+                                  <span className="answer-author">
+                                    Answered by {answer.user?.name || "Anonymous"}
+                                  </span>
+                                  <span className="answer-date">
+                                    {answer.createdAt
+                                      ? new Date(answer.createdAt).toLocaleDateString()
+                                      : "Unknown date"}
+                                  </span>
+                                </div>
+                                <div className="answer-votes">
+                                  <button
+                                    className="vote-btn upvote"
+                                    onClick={() => handleVote(answer._id, 'up')}
+                                  >▲</button>
+                                  <span className="vote-count">{answer.upVotes || 0}</span>
+                                  <button
+                                    className="vote-btn downvote"
+                                    onClick={() => handleVote(answer._id, 'down')}
+                                  >▼</button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="no-answers">No answers yet. Be the first to answer!</p>
+                        )}
+                      </>
+                    ) : (
+                      // Dummy data structure
+                      <>
+                        <h4>{question.answers?.length || 0} Answer{question.answers?.length !== 1 ? 's' : ''}</h4>
+
+                        {question.answers && question.answers.map(answer => (
+                          <div className="answer" key={answer.id}>
+                            <div className="answer-content">
+                              <p>{answer.content}</p>
+                            </div>
+                            <div className="answer-footer">
+                              <div className="answer-meta">
+                                <span className="answer-author">Answered by {answer.answeredBy}</span>
+                                <span className="answer-date">{answer.date}</span>
+                              </div>
+                              <div className="answer-votes">
+                                <button className="vote-btn upvote">▲</button>
+                                <span className="vote-count">{answer.votes}</span>
+                                <button className="vote-btn downvote">▼</button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    <div className="add-answer">
+                      <textarea
+                        placeholder="Share your knowledge by answering this question..."
+                        rows="3"
+                        value={answers[question._id || question.id] || ''}
+                        onChange={(e) => handleAnswerInputChange(question._id || question.id, e.target.value)}
+                      ></textarea>
+                      <button
+                        className="submit-answer-btn"
+                        onClick={() => submitAnswer(question._id || question.id)}
+                      >
+                        Submit Answer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-questions">
+                <p>No questions found. Be the first to ask a question!</p>
+              </div>
+            )}
           </div>
         </section>
       </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1,0 +1,299 @@
+Comment.css
+.reply {
+    margin-bottom: 15px;
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 8px;
+    transition: margin-left 0.2s ease;
+  }
+  
+  .dark .reply {
+    background-color: #333;
+  }
+  
+  .reply[style*="margin-left"] {
+    border-left: 3px solid #4caf50;
+  }
+  
+  .dark .reply[style*="margin-left"] {
+    border-left-color: #81c784;
+  }
+  
+  .reply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .reply-author {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .dark .reply-author {
+    color: #e0e0e0;
+  }
+  
+  .reply-date {
+    font-size: 0.85rem;
+    color: #777;
+  }
+  
+  .dark .reply-date {
+    color: #aaa;
+  }
+  
+  .reply-content {
+    line-height: 1.5;
+    margin-bottom: 10px;
+    color: #444;
+    word-break: break-word;
+  }
+  
+  .dark .reply-content {
+    color: #ddd;
+  }
+  
+  .reply-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .reply-action-button, 
+  .like-action-button {
+    background: none;
+    border: none;
+    color: #4caf50;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .dark .reply-action-button,
+  .dark .like-action-button {
+    color: #81c784;
+  }
+  
+  .reply-action-button:hover, 
+  .like-action-button:hover {
+    text-decoration: underline;
+  }
+  
+  .nested-reply-form {
+    margin: 10px 0;
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .dark .nested-reply-form {
+    background: #212121;
+    border-color: #424242;
+  }
+  
+  .nested-reply-form textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+  }
+  
+  .dark .nested-reply-form textarea {
+    background: #333;
+    border-color: #555;
+    color: white;
+  }
+  
+  .reply-form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  
+  .cancel-button,
+  .submit-button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .cancel-button {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    color: #555;
+  }
+  
+  .dark .cancel-button {
+    background: #424242;
+    border-color: #616161;
+    color: #e0e0e0;
+  }
+  
+  .submit-button {
+    background: #4caf50;
+    color: white;
+    border: none;
+  }
+  
+  .dark .submit-button {
+    background: #81c784;
+    color: #212121;
+  }
+  
+  .submit-button:disabled {
+    background: #9e9e9e;
+    cursor: not-allowed;
+  }
+  
+  .view-replies-button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #2196f3;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    margin: 8px 0;
+  }
+  
+  .dark .view-replies-button {
+    color: #64b5f6;
+  }
+  
+  .view-replies-button:hover {
+    text-decoration: underline;
+  }
+  
+  .view-replies-button::after {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 6px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+    transition: transform 0.2s;
+  }
+  
+  .loading-replies {
+    margin-left: 20px;
+    font-size: 14px;
+    color: #777;
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+  }
+  
+  .dark .loading-replies {
+    color: #aaa;
+  }
+  
+  .loading-replies::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border: 2px solid #e0e0e0;
+    border-top-color: #4caf50;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  .dark .loading-replies::before {
+    border-color: #424242;
+    border-top-color: #81c784;
+  }
+  
+  .nested-replies {
+    margin-top: 10px;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+
+
+  /* Depth-based styling for odd depths (1, 3, 5...) */
+.depth-even {
+    background: #dfe0da ; /* dark gray background */
+    border-left: 3px solid #4caf50;
+    padding-left: 15px;
+  }
+  
+  .dark .depth-even {
+    background-color: #1b5e20;
+    border-left-color: #81c784;
+  }
+  
+  /* Depth-based styling for even depths (2, 4, 6...) */
+  .depth-odd:not(.depth-0) {
+    background: #ecede6; /* Light gray background */
+    border-left: 3px solid #2196f3;
+    padding-left: 15px;
+  }
+  
+  .dark .depth-odd:not(.depth-0) {
+    background-color: #0d47a1;
+    border-left-color: #64b5f6;
+  }
+
+
+
+  /* Add these styles to Comment.css */
+
+/* Improved like button styling */
+.like-action-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.like-action-button.liked {
+  color: #f44336;
+  font-weight: 500;
+}
+
+.dark .like-action-button.liked {
+  color: #e57373;
+}
+
+.like-action-button::before {
+  content: '❤️';
+  font-size: 14px;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.like-action-button.liked::before {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Like button animation */
+@keyframes heart-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.like-action-button:active::before {
+  animation: heart-pulse 0.3s ease-out;
+}

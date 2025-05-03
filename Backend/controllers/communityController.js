@@ -21,7 +21,15 @@ const checkOwnership = async (userId, contentId, model) => {
 
 // Get all forum posts with pagination and filtering
 const getAllForumPosts = async (req, res) => {
-  const { category, tag, solved, sort = 'latest', page = 1, limit = 10 } = req.query;
+  const { 
+    category, 
+    tag, 
+    solved, 
+    sort = 'latest', 
+    page = 1, 
+    limit = 10,
+    search // Add search parameter
+  } = req.query;
   
   // Build the query
   const queryObject = { postType: 'ForumPost' };
@@ -40,6 +48,15 @@ const getAllForumPosts = async (req, res) => {
     queryObject.isSolved = false;
   }
   
+  // Add search functionality
+  if (search) {
+    queryObject.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { content: { $regex: search, $options: 'i' } },
+      { tags: { $regex: search, $options: 'i' } }
+    ];
+  }
+  
   // Sort options
   let sortOption = {};
   if (sort === 'latest') {
@@ -50,6 +67,8 @@ const getAllForumPosts = async (req, res) => {
     sortOption = { 'likes.length': -1, createdAt: -1 };
   } else if (sort === 'mostCommented') {
     sortOption = { 'comments.length': -1, createdAt: -1 };
+  } else if(sort === 'solved') {
+    sortOption = { isSolved: -1, createdAt: -1 };
   }
   
   // Execute the query with pagination
@@ -62,18 +81,20 @@ const getAllForumPosts = async (req, res) => {
     .populate('user', 'name avatar')
     .populate({
       path: 'comments',
-      options: { limit: 2, sort: { createdAt: -1 } },
+      options: { sort: { createdAt: -1 } },
       populate: { path: 'user', select: 'name avatar' }
     });
-  
+  console.log(posts);
+  console.log(sortOption);
   // Get total count for pagination
   const totalPosts = await ForumPost.countDocuments(queryObject);
-  
+
   res.status(StatusCodes.OK).json({
     posts,
     totalPosts,
-    numOfPages: Math.ceil(totalPosts / Number(limit))
-    ,postsPerPage: Number(limit)
+    numOfPages: Math.ceil(totalPosts / Number(limit)),
+    postsPerPage: Number(limit),
+    currentPage: Number(page)
   });
 };
  //////
@@ -228,8 +249,16 @@ const markAsSolution = async (req, res) => {
 // ==== BLOG CONTROLLERS ====
 
 // Get all blog posts with pagination and filtering
+// Get all blog posts with pagination and filtering
 const getAllBlogPosts = async (req, res) => {
-  const { category, tag, sort = 'latest', page = 1, limit = 10 } = req.query;
+  const { 
+    category, 
+    tag, 
+    sort = 'latest', 
+    page = 1, 
+    limit = 10,
+    search // Add search parameter
+  } = req.query;
   
   // Build the query
   const queryObject = { 
@@ -243,6 +272,16 @@ const getAllBlogPosts = async (req, res) => {
   
   if (tag) {
     queryObject.tags = tag;
+  }
+  
+  // Add search functionality
+  if (search) {
+    queryObject.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { subtitle: { $regex: search, $options: 'i' } },
+      { content: { $regex: search, $options: 'i' } },
+      { tags: { $regex: search, $options: 'i' } }
+    ];
   }
   
   // Sort options
@@ -273,7 +312,8 @@ const getAllBlogPosts = async (req, res) => {
   res.status(StatusCodes.OK).json({
     posts,
     totalPosts,
-    numOfPages: Math.ceil(totalPosts / Number(limit))
+    numOfPages: Math.ceil(totalPosts / Number(limit)),
+    currentPage: Number(page)
   });
 };
 
@@ -416,8 +456,17 @@ const deleteBlogPost = async (req, res) => {
 // ==== GALLERY CONTROLLERS ====
 
 // Get all gallery posts with pagination and filtering
+// Get all gallery posts with pagination and filtering
 const getAllGalleryPosts = async (req, res) => {
-  const { category, tag, mediaType, sort = 'latest', page = 1, limit = 20 } = req.query;
+  const { 
+    category, 
+    tag, 
+    mediaType, 
+    sort = 'latest', 
+    page = 1, 
+    limit = 20,
+    search // Add search parameter
+  } = req.query;
   
   // Build the query
   const queryObject = { postType: 'GalleryPost' };
@@ -432,6 +481,15 @@ const getAllGalleryPosts = async (req, res) => {
   
   if (mediaType && ['image', 'video'].includes(mediaType)) {
     queryObject.mediaType = mediaType;
+  }
+  
+  // Add search functionality
+  if (search) {
+    queryObject.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { content: { $regex: search, $options: 'i' } },
+      { tags: { $regex: search, $options: 'i' } }
+    ];
   }
   
   // Sort options
@@ -452,7 +510,7 @@ const getAllGalleryPosts = async (req, res) => {
     .skip(skip)
     .limit(Number(limit))
     .populate('user', 'name avatar')
-    .select('title mediaType mediaUrl category likes comments createdAt');
+    .select('title mediaType mediaUrl category likes comments createdAt content tags');
   
   // Get total count for pagination
   const totalPosts = await GalleryPost.countDocuments(queryObject);
@@ -460,7 +518,8 @@ const getAllGalleryPosts = async (req, res) => {
   res.status(StatusCodes.OK).json({
     posts,
     totalPosts,
-    numOfPages: Math.ceil(totalPosts / Number(limit))
+    numOfPages: Math.ceil(totalPosts / Number(limit)),
+    currentPage: Number(page)
   });
 };
 
@@ -584,7 +643,7 @@ const deleteGalleryPost = async (req, res) => {
 
 // ==== COMMON INTERACTION CONTROLLERS ====
 
-// Like a post (any type)
+// Like/unlike a post (toggle functionality)
 const likePost = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.userId;
@@ -596,59 +655,50 @@ const likePost = async (req, res) => {
   }
   
   // Check if already liked
-  if (post.likes.includes(userId)) {
-    throw new BadRequestError('Post already liked');
-  }
+  const alreadyLiked = post.likes.includes(userId);
   
-  // Add like
-  post.likes.push(userId);
-  await post.save();
-  
-  // Create notification if not self-liking
-  if (post.user.toString() !== userId) {
-    await Notification.create({
-      recipient: post.user,
-      sender: userId,
-      category: 'social',
-      action: 'like',
-      message: `${req.user.name} liked your post`,
-      references: {
-        post: id
-      },
-      redirectUrl: `/community/${post.postType.toLowerCase().replace('post', '')}/${id}`
+  if (alreadyLiked) {
+    // Remove like
+    post.likes = post.likes.filter(id => id.toString() !== userId);
+    await post.save();
+    
+    // Remove notification if it exists
+    await Notification.deleteOne({
+      'sender': userId,
+      'recipient': post.user,
+      'references.post': id,
+      'action': 'like'
+    });
+    
+    res.status(StatusCodes.OK).json({ 
+      msg: 'Post unliked successfully',
+      likesCount: post.likes.length
+    });
+  } else {
+    // Add like
+    post.likes.push(userId);
+    await post.save();
+    
+    // Create notification if not self-liking
+    if (post.user.toString() !== userId) {
+      await Notification.create({
+        recipient: post.user,
+        sender: userId,
+        category: 'social',
+        action: 'like',
+        message: `${req.user.name} liked your post`,
+        references: {
+          post: id
+        },
+        redirectUrl: `/community/${post.postType.toLowerCase().replace('post', '')}/${id}`
+      });
+    }
+    
+    res.status(StatusCodes.OK).json({ 
+      msg: 'Post liked successfully',
+      likesCount: post.likes.length
     });
   }
-  
-  res.status(StatusCodes.OK).json({ 
-    msg: 'Post liked successfully',
-    likesCount: post.likes.length
-  });
-};
-
-// Unlike a post (any type)
-const unlikePost = async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.userId;
-  
-  // Find the post
-  const post = await Post.findById(id);
-  if (!post) {
-    throw new NotFoundError(`No post found with id ${id}`);
-  }
-  
-  // Check if already liked
-  if (!post.likes.includes(userId)) {
-    throw new BadRequestError('Post not liked yet');
-  }
-  
-  // Remove like
-  post.likes = post.likes.filter(id => id.toString() !== userId);
-  await post.save();
-  
-  res.status(StatusCodes.OK).json({ 
-    msg: 'Post unliked successfully',
-    likesCount: post.likes.length
-  });
 };
 
 // Add a comment to any post type
@@ -776,7 +826,7 @@ const deleteComment = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Comment deleted successfully' });
 };
 
-// Like a comment
+// Like/unlike a comment (toggle functionality)
 const likeComment = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.userId;
@@ -788,57 +838,10 @@ const likeComment = async (req, res) => {
   }
   
   // Check if already liked
-  if (comment.likes.includes(userId)) {
-    throw new BadRequestError('Comment already liked');
-  }
+  const alreadyLiked = comment.likes.includes(userId);
   
-  // Add like
-  comment.likes.push(userId);
-  await comment.save();
-  
-  // Create notification if not self-liking
-  if (comment.user.toString() !== userId) {
-    // Get the post for the redirect URL
-    const post = await Post.findById(comment.post);
-    
-    await Notification.create({
-      recipient: comment.user,
-      sender: userId,
-      category: 'social',
-      action: 'like',
-      message: `${req.user.name} liked your comment`,
-      references: {
-        post: comment.post,
-        comment: id
-      },
-      redirectUrl: `/community/${post.postType.toLowerCase().replace('post', '')}/${comment.post}#comment-${id}`
-    });
-  }
-  
-  res.status(StatusCodes.OK).json({ 
-    msg: 'Comment liked successfully',
-    likesCount: comment.likes.length
-  });
-};
-
-//////////
-// Unlike a comment
-const unlikeComment = async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.userId;
-    
-    // Find the comment
-    const comment = await Comment.findById(id);
-    if (!comment) {
-      throw new NotFoundError(`No comment found with id ${id}`);
-    }
-    
-    // Check if the comment is already liked by the user
-    if (!comment.likes.includes(userId)) {
-      throw new BadRequestError('Comment is not liked yet');
-    }
-    
-    // Remove like
+  if (alreadyLiked) {
+    // Unlike: Remove user ID from likes array
     comment.likes = comment.likes.filter(id => id.toString() !== userId);
     await comment.save();
     
@@ -854,7 +857,37 @@ const unlikeComment = async (req, res) => {
       msg: 'Comment unliked successfully',
       likesCount: comment.likes.length
     });
-  };
+  } else {
+    // Like: Add user ID to likes array
+    comment.likes.push(userId);
+    await comment.save();
+    
+    // Create notification if not self-liking
+    if (comment.user.toString() !== userId) {
+      // Get the post for the redirect URL
+      const post = await Post.findById(comment.post);
+      
+      await Notification.create({
+        recipient: comment.user,
+        sender: userId,
+        category: 'social',
+        action: 'like',
+        message: `${req.user.name} liked your comment`,
+        references: {
+          post: comment.post,
+          comment: id
+        },
+        redirectUrl: `/community/${post.postType.toLowerCase().replace('post', '')}/${comment.post}#comment-${id}`
+      });
+    }
+    
+    res.status(StatusCodes.OK).json({ 
+      msg: 'Comment liked successfully',
+      likesCount: comment.likes.length
+    });
+  }
+};
+
 
 
   //////////////////////////
@@ -933,11 +966,10 @@ module.exports = {
   
   // Common controllers for interactions
   likePost,
-  unlikePost,
+
   addComment,
   updateComment,
   deleteComment,
   likeComment,
-  unlikeComment,
   replyToComment
 };

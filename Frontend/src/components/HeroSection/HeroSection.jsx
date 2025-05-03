@@ -1,11 +1,13 @@
-// HeroSection.jsx
-import React, { useEffect, useRef } from 'react';
+// HeroSection.jsx with Care Guides Modal
+import React, { useEffect, useRef, useState } from 'react';
 import './HeroSection.css';
+import CareGuidesModal from '../CareGuidesModal/CareGuidesModal';
 
 const HeroSection = () => {
   const heroRef = useRef(null);
   const plantRef = useRef(null);
   const textRef = useRef(null);
+  const [showCareGuidesModal, setShowCareGuidesModal] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,6 +47,11 @@ const HeroSection = () => {
     "Plants can recognize their relatives"
   ];
 
+  // Toggle function for Care Guides modal
+  const toggleCareGuidesModal = () => {
+    setShowCareGuidesModal(!showCareGuidesModal);
+  };
+
   return (
     <section className="hero-section" ref={heroRef}>
       <div className="hero-bg-pattern"></div>
@@ -66,7 +73,10 @@ const HeroSection = () => {
               Explore Plants
               <span className="cta-icon">🌿</span>
             </button>
-            <button className="cta-button secondary">
+            <button 
+              className="cta-button secondary"
+              onClick={toggleCareGuidesModal}
+            >
               Care Guides
               <span className="cta-icon">📚</span>
             </button>
@@ -74,16 +84,7 @@ const HeroSection = () => {
           
           <div className="hero-stats">
             <div className="stat-item">
-              <span className="stat-number">500+</span>
-              <span className="stat-label">Plant Varieties</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">10k+</span>
-              <span className="stat-label">Happy Customers</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">4.8</span>
-              <span className="stat-label">Customer Rating</span>
+              
             </div>
           </div>
         </div>
@@ -93,14 +94,7 @@ const HeroSection = () => {
             <div className="image-glow"></div>
             <img src="/plant-image.png" alt="Monstera plant" className="main-plant" />
           </div>
-          <div className="floating-elements">
-            <div className="floating-leaf leaf-1">🍃</div>
-            <div className="floating-leaf leaf-2">🌿</div>
-            <div className="floating-leaf leaf-3">☘️</div>
-            <div className="floating-badge">
-              <span className="badge-text">New Arrivals</span>
-            </div>
-          </div>
+         
         </div>
       </div>
       
@@ -119,6 +113,12 @@ const HeroSection = () => {
         <span className="scroll-text">Scroll to discover</span>
         <span className="scroll-icon">↓</span>
       </div>
+
+      {/* Care Guides Modal */}
+      <CareGuidesModal 
+        isOpen={showCareGuidesModal} 
+        onClose={() => setShowCareGuidesModal(false)} 
+      />
     </section>
   );
 };

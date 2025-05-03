@@ -1,0 +1,169 @@
+/* Addresses.css */
+.addresses {
+    min-height: 300px;
+  }
+  
+  .address-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  @media (min-width: 768px) {
+    .address-list {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  .address-card {
+    position: relative;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #fff;
+  }
+  
+  .default-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background-color: #c6f6d5;
+    color: #2f855a;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+  }
+  
+  .address-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #2d3748;
+    font-size: 1.125rem;
+  }
+  
+  .address-card p {
+    margin: 0.25rem 0;
+    color: #718096;
+  }
+  
+  .address-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+  
+  .addresses-actions {
+    margin-top: 1.5rem;
+  }
+  
+  .empty-addresses {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .empty-addresses-message {
+    text-align: center;
+    max-width: 300px;
+  }
+  
+  .empty-addresses-message h3 {
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+  }
+  
+  .empty-addresses-message p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+  }
+  
+  .address-form-container {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .address-form-container h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #4a5568;
+    font-size: 1.125rem;
+  }
+  
+  .address-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  
+  @media (min-width: 640px) {
+    .form-row {
+      flex-direction: row;
+    }
+    
+    .form-row .form-group {
+      flex: 1;
+    }
+  }
+  
+  .form-group {
+    margin: 0;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568;
+  }
+  
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  }
+  
+  .form-group.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .form-group.checkbox input {
+    width: auto;
+  }
+  
+  .form-group.checkbox label {
+    margin-bottom: 0;
+    font-weight: 400;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+  }

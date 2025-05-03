@@ -1,5 +1,7 @@
 // CartSidebar.jsx
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+
 import { useCart } from './CartContext';
 import './CartSidebar.css';
 
@@ -13,7 +15,7 @@ const CartSidebar = () => {
     updateCartQuantity 
   } = useCart();
 
-  console.log('Cart state:', { isOpen: isCartOpen, items: cart });
+  // console.log('Cart state:', { isOpen: isCartOpen, items: cart });
 
   return (
     <>
@@ -33,7 +35,7 @@ const CartSidebar = () => {
           <>
             <div className="cart-items">
               {cart.map(item => (
-                <div className="cart-item" key={item.id}>
+                <div className="cart-item" key={item.product}>
                   <div className="cart-item-image">
                     <img 
                       src={item.image} 
@@ -51,21 +53,21 @@ const CartSidebar = () => {
                     <div className="cart-item-controls">
                       <div className="quantity-control">
                         <button 
-                          onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                          onClick={() => {updateCartQuantity(item.product, item.quantity - 1)}}
                           disabled={item.quantity <= 1}
                         >
                           -
                         </button>
                         <span>{item.quantity}</span>
                         <button 
-                          onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateCartQuantity(item.product, item.quantity + 1)}
                         >
                           +
                         </button>
                       </div>
                       <button 
                         className="remove-item-btn"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.product)}
                       >
                         Remove
                       </button>
@@ -82,7 +84,13 @@ const CartSidebar = () => {
               </div>
               
               <div className="cart-actions">
-                <button className="checkout-btn">Proceed to Checkout</button>
+                {/* <button className="checkout-btn"> */}
+                <Link to="/checkout" className="checkout-btn"
+                onClick={() => setIsCartOpen(false)}>
+  Proceed to Checkout
+</Link>
+{/* </button> */}
+                
                 <button 
                   className="continue-shopping-btn"
                   onClick={() => setIsCartOpen(false)}
@@ -106,12 +114,12 @@ const CartSidebar = () => {
           <div className="empty-cart">
             <div className="empty-cart-icon">🛒</div>
             <p>Your cart is empty</p>
-            <button 
+            <Link to="/market"
               className="continue-shopping-btn"
               onClick={() => setIsCartOpen(false)}
             >
               Start Shopping
-            </button>
+            </Link>
           </div>
         )}
       </div>

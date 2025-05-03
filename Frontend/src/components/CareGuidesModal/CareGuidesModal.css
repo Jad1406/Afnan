@@ -1,0 +1,293 @@
+/* CareGuidesModal.css */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  
+  .care-modal-content {
+    background-color: white;
+    border-radius: var(--border-radius);
+    max-width: 1000px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: modalFadeIn 0.3s ease-out;
+    padding: 30px;
+  }
+  
+  .dark .care-modal-content {
+    background-color: #2a2a2a;
+    color: var(--text-color-dark);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  
+  .modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    z-index: 10;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #555;
+    transition: all 0.2s;
+  }
+  
+  .dark .modal-close-btn {
+    color: #ccc;
+  }
+  
+  .modal-close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+  }
+  
+  .dark .modal-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+  
+  .care-modal-content h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 30px;
+    font-size: 2rem;
+  }
+  
+  .dark .care-modal-content h2 {
+    color: var(--primary-light);
+  }
+  
+  .care-guide-container {
+    display: flex;
+    min-height: 60vh;
+  }
+  
+  .care-categories {
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .dark .care-categories {
+    border-color: #444;
+  }
+  
+  .care-category-btn {
+    text-align: left;
+    padding: 12px 15px;
+    background: none;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-color-light);
+  }
+  
+  .dark .care-category-btn {
+    color: var(--text-color-dark);
+  }
+  
+  .care-category-btn:hover {
+    background-color: rgba(46, 125, 50, 0.1);
+  }
+  
+  .dark .care-category-btn:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+  }
+  
+  .care-category-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  .dark .care-category-btn.active {
+    background-color: var(--primary-light);
+  }
+  
+  .care-guide-content {
+    flex-grow: 1;
+    padding-left: 30px;
+    overflow-y: auto;
+  }
+  
+  .care-guide-content h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+  }
+  
+  .dark .care-guide-content h3 {
+    color: var(--primary-light);
+  }
+  
+  .guide-intro {
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    font-style: italic;
+    color: #666;
+  }
+  
+  .dark .guide-intro {
+    color: #aaa;
+  }
+  
+  .guide-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .guide-section {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .section-text {
+    flex: 1;
+  }
+  
+  .section-text h4 {
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+  }
+  
+  .dark .section-text h4 {
+    color: var(--primary-light);
+  }
+  
+  .section-text p {
+    line-height: 1.6;
+    margin: 0;
+  }
+  
+  .section-image {
+    width: 200px;
+    height: 150px;
+    flex-shrink: 0;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+  
+  .section-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .care-guide-footer {
+    margin-top: 30px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    font-size: 0.95rem;
+  }
+  
+  .dark .care-guide-footer {
+    border-color: #444;
+  }
+  
+  .care-guide-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+  
+  .dark .care-guide-footer a {
+    color: var(--primary-light);
+  }
+  
+  .care-guide-footer a:hover {
+    text-decoration: underline;
+  }
+  
+  @keyframes modalFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 768px) {
+    .care-guide-container {
+      flex-direction: column;
+    }
+    
+    .care-categories {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid #eee;
+      padding-right: 0;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .dark .care-categories {
+      border-color: #444;
+    }
+    
+    .care-category-btn {
+      flex: 1 1 calc(50% - 8px);
+      text-align: center;
+      padding: 10px;
+    }
+    
+    .care-guide-content {
+      padding-left: 0;
+    }
+    
+    .guide-section {
+      flex-direction: column-reverse;
+    }
+    
+    .section-image {
+      width: 100%;
+      height: 180px;
+      margin-bottom: 15px;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .care-modal-content {
+      padding: 20px 15px;
+    }
+    
+    .care-category-btn {
+      flex: 1 1 100%;
+    }
+  }
