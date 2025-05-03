@@ -44,7 +44,7 @@ const asyncWrapper = require('../middleware/async')
 //Routes for the plants data
 router.get('/plants', asyncWrapper(getAllPlantsData))
 router.get('/plants/:id', asyncWrapper(getPlantsDataById))
-router.post('/plants', auth, asyncWrapper(createPlantsData))
+router.post('/plants', isAdmin, asyncWrapper(createPlantsData))
 router.patch('/plants/:id', auth, asyncWrapper(updatePlantsData))
 router.delete('/plants/:id', auth, asyncWrapper(deletePlantsData))
 

@@ -256,4 +256,44 @@ Comment.css
 
 
 
-  
+  /* Add these styles to Comment.css */
+
+/* Improved like button styling */
+.like-action-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.like-action-button.liked {
+  color: #f44336;
+  font-weight: 500;
+}
+
+.dark .like-action-button.liked {
+  color: #e57373;
+}
+
+.like-action-button::before {
+  content: '❤️';
+  font-size: 14px;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.like-action-button.liked::before {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Like button animation */
+@keyframes heart-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.like-action-button:active::before {
+  animation: heart-pulse 0.3s ease-out;
+}

@@ -809,3 +809,244 @@
         font-size: 1.8rem;
     }
 }
+
+/* Loading spinner */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+    width: 100%;
+    padding: 20px;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(46, 125, 50, 0.2);
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.dark .loading-spinner {
+    border: 5px solid rgba(76, 175, 80, 0.2);
+    border-top: 5px solid var(--primary-light);
+}
+
+.loading-container p {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.dark .loading-container p {
+    color: var(--primary-light);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Additional Q&A styles */
+.question-body {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    line-height: 1.6;
+}
+
+.dark .question-body {
+    background-color: #333;
+}
+
+.no-questions, .no-answers {
+    text-align: center;
+    padding: 20px;
+    background-color: #f9f9f4;
+    border-radius: var(--border-radius);
+    margin: 20px 0;
+    font-style: italic;
+    color: #777;
+}
+
+.dark .no-questions, .dark .no-answers {
+    background-color: #2a2a2a;
+    color: #aaa;
+}
+
+/* Question Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.question-modal {
+    background-color: white;
+    border-radius: var(--border-radius);
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.dark .question-modal {
+    background-color: #2a2a2a;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dark .modal-header {
+    border-color: #444;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.dark .modal-header h3 {
+    color: var(--primary-light);
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #777;
+}
+
+.dark .close-modal {
+    color: #aaa;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.dark .close-modal:hover {
+    color: #fff;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+}
+
+.dark .form-group input,
+.dark .form-group textarea,
+.dark .form-group select {
+    background-color: #333;
+    border-color: #444;
+    color: white;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.dark .form-group input:focus,
+.dark .form-group textarea:focus,
+.dark .form-group select:focus {
+    border-color: var(--primary-light);
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.dark .modal-footer {
+    border-color: #444;
+}
+
+.cancel-btn {
+    background-color: #f1f1f1;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.dark .cancel-btn {
+    background-color: #444;
+    color: #eee;
+}
+
+.cancel-btn:hover {
+    background-color: #e1e1e1;
+}
+
+.dark .cancel-btn:hover {
+    background-color: #555;
+}
+
+.submit-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.dark .submit-btn {
+    background-color: var(--primary-light);
+}
+
+.submit-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.dark .submit-btn:hover {
+    background-color: var(--primary-color);
+}

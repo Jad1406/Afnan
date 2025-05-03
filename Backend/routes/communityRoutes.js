@@ -41,7 +41,7 @@ const {
 
 // Forum routes
 router.route('/forum')
-  // .get(getAllForumPosts)
+  .get(getAllForumPosts)
   .post(authenticateUser, createForumPost);
 
 router.route('/forum/:id')
@@ -76,13 +76,11 @@ router.route('/gallery/:id')
 
 // Interaction routes (common for all post types)
 router.post('/posts/:id/like', authenticateUser, likePost);
-router.delete('/posts/:id/like', authenticateUser, unlikePost);
 router.post('/posts/:id/comments', authenticateUser, addComment);
 router.route('/comments/:id')
   .patch(authenticateUser, updateComment)
   .delete(authenticateUser, deleteComment);
 router.post('/comments/:id/like', authenticateUser, likeComment);
-router.post('/comments/:id/unlike', authenticateUser, unlikeComment);
 router.post('/comments/:id/reply', authenticateUser, replyToComment);
 
 
@@ -101,109 +99,7 @@ router.post('/comments/:id/reply', authenticateUser, replyToComment);
 
 
 // Backend route handler (Express.js)
-// GET /api/v1/community/forum
-router.get('/forum', async (req, res) => {
-  try {
-    // Pagination parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    
-    // Base query to find all posts with pagination
-    const posts = await Post.find({ postType:"ForumPost" })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('user', 'name avatar')
-      .populate('comments')
-      .lean();
-    
-    // Get total count for pagination metadata
-    const totalPosts = await Post.countDocuments({ postType:"ForumPost" });
-    
-    // For each post, add the comment count and top-level comments
-    const postsWithCommentData = await Promise.all(posts.map(async (post) => {
-      // Count total comments for this post
-      const commentCount = await Comment.countDocuments({ post: post._id });
-      
-      // Find only top-level comments for this post
-      let topLevelComments = [];
-      if (req.query.includeTopComments === 'true') {
-        topLevelComments = await Comment.find({
-          post: post._id,
-          parentComment: { $exists: false }
-        })
-        .limit(3) // Limit to 3 top comments initially
-        .sort({ createdAt: -1 })
-        .populate('user', 'name avatar')
-        .lean();
-        
-        // For each top comment, count how many replies it has
-        topLevelComments = await Promise.all(topLevelComments.map(async (comment) => {
-          const replyCount = await Comment.countDocuments({
-            parentComment: comment._id
-          });
-          
-          return {
-            ...comment,
-            replyCount
-          };
-        }));
-      }
-      
-      return {
-        ...post,
-        commentCount,
-        topLevelComments: req.query.includeTopComments === 'true' ? topLevelComments : []
-      };
-    }));
-    
-    // Return posts with pagination metadata
-    res.json({
-      posts: postsWithCommentData,
-      pagination: {
-        totalPosts,
-        totalPages: Math.ceil(totalPosts / limit),
-        currentPage: page,
-        hasNextPage: page < Math.ceil(totalPosts / limit),
-        hasPrevPage: page > 1
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching forum posts:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
-
-// Helper function to build a comment tree
-function buildCommentTree(comments) {
-  const commentMap = {};
-  const rootComments = [];
-  
-  // First pass: create a map of comments by ID
-  comments.forEach(comment => {
-    commentMap[comment._id] = {
-      ...comment,
-      replies: []
-    };
-  });
-  
-  // Second pass: build the tree structure
-  comments.forEach(comment => {
-    if (comment.parentComment) {
-      // This is a reply, add it to its parent's replies
-      if (commentMap[comment.parentComment]) {
-        commentMap[comment.parentComment].replies.push(commentMap[comment._id]);
-      }
-    } else {
-      // This is a root comment
-      rootComments.push(commentMap[comment._id]);
-    }
-  });
-  
-  return rootComments;
-}
 
 
 
