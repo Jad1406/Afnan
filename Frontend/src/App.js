@@ -339,11 +339,11 @@ const AppRoutes = () => {
       {/* AI route */}
       <Route path="/ai" element={<AI />} />
       {/* Footer component - available on all pages except auth */}
-      <Routes>
-        <Route path="/login" element={null} />
-        <Route path="/signup" element={null} />
-        <Route path="*" element={<Footer darkMode={darkMode} />
-} />
+
+      <Route path="/login" element={null} />
+      <Route path="/signup" element={null} />
+      <Route path="*" element={<Footer darkMode={darkMode} />
+  } />
       </Routes>
 
   );
