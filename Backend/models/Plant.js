@@ -1,42 +1,17 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const PlantSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, 'Please provide company name'],
-      maxlength: 50,
-    },
-    nickname: {
-      type: String,
-      required: [true, 'Please provide position'],
-      maxlength: 100,
-    },
-    image: {
-      type: String,
-      enum: ['interview', 'declined', 'pending'],
-      default: 'pending',
-    },
-    acquiredDate: {
-      type: mongoose.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Please provide user'],
-    },
-    lastWatered:{
+const PlantSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  nickname: String,
+  acquiredDate: { type: Date }, 
+  lastWatered: { type: Date },  
+  wateringFrequency: { type: Number, default: 7 },
+  lastFertilized: { type: Date },
+  fertilizingFrequency: { type: Number, default: 30 },
+  location: String,
+  notes: String,
+  healthStatus: { type: String, enum: ['healthy', 'needsAttention', 'declining'], default: 'healthy' },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // optional for now
+});
 
-    },
-    wateringFrequency:{}
-    ,
-    lastFertilized:{
-
-    },
-    fertilizingFrequency:{}
-    ,
-    location:{},
-    notes:{},
-    healthStatus:{},
-  },
-  { timestamps: true }
-)
-
-module.exports = mongoose.model('Plant', PlantSchema)
+module.exports = mongoose.model('Plant', PlantSchema);
